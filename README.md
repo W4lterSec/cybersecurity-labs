@@ -1,3 +1,5 @@
+🌐 **[Ver MadLabs en formato visual](https://woftwerine.github.io/cybersecurity-labs/red-team/hackmyvm/madlabs/MadLabs-Writeup.html)**
+
 # woftwerine · Cybersecurity Labs
 
 Laboratorios y writeups de ciberseguridad organizados por especialidad.
