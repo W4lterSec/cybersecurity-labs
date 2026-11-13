@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Proyecto Blue Team de W4lterSec: una demostración de T-Pot para estudiar actividad sospechosa y mejorar la detección temprana.">
+  <title>T-Pot · Blue Team · W4lterSec</title>
+  <style>
+    :root{color-scheme:dark;--bg:#080d16;--panel:#101a2a;--line:#233349;--fg:#edf4ff;--muted:#a0afc4;--blue:#63bcff;--cyan:#72e3da;--pink:#ff5bba}
+    *{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:30px}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 system-ui,-apple-system,"Segoe UI",sans-serif;background-image:radial-gradient(800px 500px at 15% 0,rgba(42,111,220,.12),transparent 75%)}
+    a{color:var(--blue);text-underline-offset:4px}a:hover{color:var(--cyan)}a:focus-visible,video:focus-visible{outline:3px solid var(--cyan);outline-offset:5px}.wrap{max-width:1120px;margin:auto;padding:0 28px}.mono{font-family:ui-monospace,Consolas,monospace}
+    header{border-bottom:1px solid var(--line)}header .wrap{display:flex;align-items:center;justify-content:space-between;gap:20px;padding-top:20px;padding-bottom:20px}.brand{font-weight:750;letter-spacing:.04em;color:var(--fg);text-decoration:none}.brand span{color:var(--blue)}.back{font-size:.83rem;text-decoration:none;color:var(--muted)}
+    .hero{padding:58px 0 36px}.eyebrow{color:var(--cyan);font:12px ui-monospace,Consolas,monospace;letter-spacing:.16em;text-transform:uppercase}.eyebrow::before{content:"";display:inline-block;width:7px;height:7px;background:var(--cyan);border-radius:50%;margin-right:10px}
+    h1{font-size:clamp(38px,6vw,66px);line-height:1.12;letter-spacing:-.045em;margin:20px 0 18px;max-width:920px;text-wrap:balance}h1 span{color:var(--blue)}.intro{color:var(--muted);max-width:800px;font-size:1.1rem;margin:0}.tags{display:flex;gap:10px;flex-wrap:wrap;margin-top:25px}.tag{border:1px solid var(--line);background:#101a2a;border-radius:7px;font:12px ui-monospace,Consolas,monospace;padding:6px 12px;color:var(--muted)}.tag.primary{border-color:#285e88;color:var(--blue)}
+    .player{margin:10px 0 50px;scroll-margin-top:24px}.player-top{display:flex;justify-content:space-between;align-items:center;gap:14px;border:1px solid var(--line);border-bottom:0;border-radius:14px 14px 0 0;padding:14px 18px;background:var(--panel)}.player-top h2{font-size:1rem;font-weight:650;margin:0}.recording{font:11px ui-monospace,Consolas,monospace;color:var(--muted);white-space:nowrap}.recording::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--pink);display:inline-block;margin-right:7px}video{display:block;width:100%;height:auto;aspect-ratio:1920/876;background:#05070c;border:1px solid var(--line);border-radius:0 0 14px 14px}.player-note{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-top:14px;font-size:.85rem;color:var(--muted)}.player-note a{text-decoration:none}
+    .section-label{font:11px ui-monospace,Consolas,monospace;letter-spacing:.13em;color:var(--blue);text-transform:uppercase;margin-bottom:10px}h2{font-size:clamp(24px,3vw,34px);line-height:1.25;letter-spacing:-.02em;margin:0 0 16px}section{margin:0 0 52px}.section-copy{color:var(--muted);max-width:850px;margin:0 0 24px}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.card{border:1px solid var(--line);border-radius:12px;background:linear-gradient(155deg,#131f31,#0c1421);padding:24px}.card .number{font:13px ui-monospace,Consolas,monospace;color:var(--cyan);display:block;margin-bottom:18px}.card h3{font-size:1.03rem;margin:0 0 9px}.card p{color:var(--muted);font-size:.92rem;margin:0}.method{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid var(--line);border-radius:12px;overflow:hidden}.method div{padding:22px;border-right:1px solid var(--line);background:#0d1624}.method div:last-child{border:0}.method b{display:block;color:var(--blue);margin-bottom:8px}.method p{color:var(--muted);font-size:.88rem;margin:0}.goal{border-left:3px solid var(--cyan);background:rgba(114,227,218,.045);padding:20px 24px;margin-top:24px}.goal strong{color:var(--cyan)}.goal p{margin:0;color:var(--muted)}
+    footer{border-top:1px solid var(--line);padding:24px 0 32px;color:var(--muted);font-size:.8rem}footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}footer a{text-decoration:none}
+    @media(max-width:760px){.hero{padding-top:36px}.cards{grid-template-columns:1fr}.method{grid-template-columns:1fr 1fr}.method div:nth-child(2){border-right:0}.method div:nth-child(-n+2){border-bottom:1px solid var(--line)}.wrap{padding-left:20px;padding-right:20px}header .wrap{gap:12px}.back{font-size:.75rem}.recording{font-size:10px}}
+    @media(max-width:420px){.method{grid-template-columns:1fr}.method div{border-right:0;border-bottom:1px solid var(--line)}.player-top{padding:12px}.player-top h2{font-size:.9rem}}
+    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+  </style>
+</head>
+<body>
+  <header><div class="wrap"><a class="brand" href="https://github.com/W4lterSec">💻 W4lterSec <span>/ Blue Team</span></a><a class="back" href="https://github.com/W4lterSec/cybersecurity-labs/tree/main/blue-team">← Todos los proyectos</a></div></header>
+  <main class="wrap">
+    <div class="hero">
+      <div class="eyebrow">Proyecto de estudio · Honeypots</div>
+      <h1><span>T-Pot.</span> Estudiar el ataque para mejorar la defensa.</h1>
+      <p class="intro">Una demostración del mapa de actividad de T-Pot para observar patrones de conexión, servicios objetivo y señales que ayuden a mejorar la detección temprana.</p>
+      <div class="tags"><span class="tag primary">BLUE TEAM</span><span class="tag">VÍDEO · 31 S</span><span class="tag">ANÁLISIS DE EVENTOS</span><span class="tag">DETECCIÓN TEMPRANA</span></div>
+    </div>
+    <section class="player" id="demostracion" aria-labelledby="video-heading">
+      <div class="player-top"><h2 id="video-heading">Demostración · T-Pot Attack Map</h2><span class="recording">GRABACIÓN</span></div>
+      <video id="demo-video" controls playsinline preload="metadata" poster="tpot-preview.jpg" aria-label="Vídeo demostrativo del mapa de actividad de T-Pot" aria-describedby="video-description">
+        <source src="T-Pot-demo.mp4" type="video/mp4">
+        Tu navegador no puede reproducir este vídeo. <a href="T-Pot-demo.mp4">Descargar T-Pot-demo.mp4</a>.
+      </video>
+      <div class="player-note"><span id="video-description">Mapa de actividad, tipos de servicio y registro de eventos.</span><a href="T-Pot-demo.mp4" download>↓ Descargar vídeo</a></div>
+    </section>
+    <section aria-labelledby="observe-heading">
+      <div class="section-label">01 / Qué muestra la demostración</div>
+      <h2 id="observe-heading">De la actividad a las preguntas.</h2>
+      <p class="section-copy">La grabación recorre el mapa de T-Pot y su tabla de eventos. Es el punto de partida para estudiar la actividad observada y plantear preguntas de investigación.</p>
+      <div class="cards">
+        <article class="card"><span class="number">01 / MAPA</span><h3>Distribución de conexiones</h3><p>Observar la concentración de actividad y su evolución, usando los datos de origen como contexto de investigación.</p></article>
+        <article class="card"><span class="number">02 / SERVICIOS</span><h3>Qué están buscando</h3><p>Relacionar los protocolos y los puertos objetivo con los servicios que aparecen en los eventos registrados.</p></article>
+        <article class="card"><span class="number">03 / EVENTOS</span><h3>Buscar patrones</h3><p>Examinar repeticiones, secuencias y cambios de frecuencia para formular hipótesis sobre la actividad observada.</p></article>
+      </div>
+    </section>
+    <section aria-labelledby="study-heading">
+      <div class="section-label">02 / Objetivo del proyecto</div>
+      <h2 id="study-heading">Aprender a detectar antes.</h2>
+      <p class="section-copy">El objetivo es estudiar el comportamiento de los atacantes y convertir lo observado en ideas de detección y prevención que se puedan contrastar en el laboratorio.</p>
+      <div class="method"><div><b>Observar</b><p>Identificar actividad y eventos relevantes.</p></div><div><b>Relacionar</b><p>Comparar orígenes, servicios y secuencias.</p></div><div><b>Investigar</b><p>Plantear hipótesis y buscar evidencias.</p></div><div><b>Validar</b><p>Probar detecciones y medidas defensivas.</p></div></div>
+      <div class="goal"><p><strong>Enfoque Blue Team:</strong> estudiar señales, comprender patrones y mejorar la capacidad de respuesta y prevención.</p></div>
+    </section>
+  </main>
+  <footer><div class="wrap"><span>W4lterSec · Blue Team · Proyecto demostrativo</span><span><a href="https://github.com/W4lterSec/cybersecurity-labs/tree/main/blue-team/t-pot">Documentación del proyecto</a> · <a href="https://github.com/telekom-security/tpotce" target="_blank" rel="noopener noreferrer">T-Pot oficial ↗</a></span></div></footer>
+</body>
+</html>
