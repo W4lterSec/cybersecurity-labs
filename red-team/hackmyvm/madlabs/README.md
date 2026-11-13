@@ -26,6 +26,10 @@
 - **User:** `HMV{tr1ck_0r_tr34t_g1v3_m3_r00t_0r_1_t4k3_0v3r_y0ur_syst3m}`
 - **Root:** `HMV{n0t_4_gh0st_j1st_4_r00t_us3r_1n_y0ur_syst3m}`
 
+![MadLabs completada en HackMyVM](madlabs-completada.png)
+
+*Confirmación de la máquina completada en HackMyVM.*
+
 ---
 
 ## 1. Reconocimiento
