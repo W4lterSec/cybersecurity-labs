@@ -264,7 +264,7 @@ ls -la /var/crash/.fb
 
 ---
 
-## 6. PrivEsc #3 — `frankenstein → root` (clave SSH robada)
+## 6. PrivEsc #3 — `frankenstein → root` (clave SSH crackeada)
 
 El home de frankenstein contiene una **clave privada de root**:
 
