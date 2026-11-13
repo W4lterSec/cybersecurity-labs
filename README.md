@@ -1,4 +1,4 @@
-🌐 **[Ver Aegis en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/hackmyvm/aegis/Aegis-Writeup.html)** · **[Ver MadLabs en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/hackmyvm/madlabs/MadLabs-Writeup.html)**
+🌐 **[Ver Earth en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/vulnhub/earth/Earth-Writeup.html)** · **[Ver Aegis en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/hackmyvm/aegis/Aegis-Writeup.html)** · **[Ver MadLabs en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/hackmyvm/madlabs/MadLabs-Writeup.html)**
 
 # W4lterSec · Cybersecurity Labs
 
@@ -11,15 +11,19 @@ Laboratorios y writeups de ciberseguridad organizados por especialidad.
 
 ## Última máquina completada
 
-**[Aegis · HackMyVM](red-team/hackmyvm/aegis/README.md)** — Linux · dificultad media · rsync anónimo, deserialización pickle y escalada hasta root.
+**[Earth · VulnHub](red-team/vulnhub/earth/README.md)** — Linux / Fedora 34 · dificultad oficial fácil · vhosts, criptoanálisis XOR, ejecución autenticada y escalada mediante un binario SUID.
 
-`operator → adrian → root`
+`terra (panel) → apache → root`
 
 ## Organización
 
 ```text
 red-team/
   README.md
+  vulnhub/
+    earth/
+      README.md
+      Earth-Writeup.html
   hackmyvm/
     aegis/
       README.md
@@ -32,6 +36,6 @@ blue-team/
   README.md
 ```
 
-Cada laboratorio cuenta con su propia carpeta. Los writeups en Markdown se pueden leer directamente en GitHub; las versiones HTML se descargan y se abren en el navegador.
+Cada laboratorio cuenta con su propia carpeta. Los writeups en Markdown se pueden leer directamente en GitHub; las versiones visuales se abren directamente desde los enlaces publicados.
 
 Los ejercicios documentados se realizan en entornos de laboratorio autorizados. Las flags y credenciales que aparecen en los writeups pertenecen a las máquinas de prácticas.
