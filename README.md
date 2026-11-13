@@ -1,4 +1,4 @@
-🌐 **[Ver MadLabs en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/hackmyvm/madlabs/MadLabs-Writeup.html)**
+🌐 **[Ver Aegis en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/hackmyvm/aegis/Aegis-Writeup.html)** · **[Ver MadLabs en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/hackmyvm/madlabs/MadLabs-Writeup.html)**
 
 # W4lterSec · Cybersecurity Labs
 
@@ -11,9 +11,9 @@ Laboratorios y writeups de ciberseguridad organizados por especialidad.
 
 ## Última máquina completada
 
-**[MadLabs · HackMyVM](red-team/hackmyvm/madlabs/README.md)** — Linux · dificultad estimada media · acceso inicial mediante subida de archivos y escalada hasta root.
+**[Aegis · HackMyVM](red-team/hackmyvm/aegis/README.md)** — Linux · dificultad media · rsync anónimo, deserialización pickle y escalada hasta root.
 
-`www-data → igor → frankenstein → root`
+`operator → adrian → root`
 
 ## Organización
 
@@ -21,6 +21,10 @@ Laboratorios y writeups de ciberseguridad organizados por especialidad.
 red-team/
   README.md
   hackmyvm/
+    aegis/
+      README.md
+      Aegis-Writeup.html
+      aegis-completada.png
     madlabs/
       README.md
       MadLabs-Writeup.html
@@ -30,4 +34,4 @@ blue-team/
 
 Cada laboratorio cuenta con su propia carpeta. Los writeups en Markdown se pueden leer directamente en GitHub; las versiones HTML se descargan y se abren en el navegador.
 
-Los ejercicios documentados se realizan en entornos de laboratorio autorizados. Las flags y credenciales de MadLabs que aparecen en el writeup pertenecen a esa máquina de prácticas.
+Los ejercicios documentados se realizan en entornos de laboratorio autorizados. Las flags y credenciales que aparecen en los writeups pertenecen a las máquinas de prácticas.
