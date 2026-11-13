@@ -6,7 +6,11 @@ Espacio dedicado a laboratorios de defensa y análisis.
 
 ## Laboratorios
 
-Todavía no hay laboratorios de Blue Team publicados en esta colección.
+| Proyecto | Área | Acceso |
+| --- | --- | --- |
+| [📊 Splunk](https://github.com/W4lterSec/Splunk) | SIEM · Blue Team | 🔒 Repositorio privado |
+
+**Splunk** forma parte de mis proyectos de Blue Team. El enlace abre el repositorio original; su consulta requiere autorización de acceso.
 
 ## Áreas
 
