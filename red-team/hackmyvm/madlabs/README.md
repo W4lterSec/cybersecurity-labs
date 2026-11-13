@@ -30,6 +30,8 @@
 
 *Confirmación de la máquina completada en HackMyVM.*
 
+[🔗 Abrir la máquina MadLabs en HackMyVM](https://hackmyvm.eu/machine/Madlabs)
+
 ---
 
 ## 1. Reconocimiento
