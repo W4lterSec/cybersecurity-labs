@@ -8,6 +8,7 @@ Writeups de máquinas y laboratorios de seguridad ofensiva.
 
 | Máquina | Plataforma | Sistema | Dificultad estimada | Técnicas | Estado |
 | --- | --- | --- | --- | --- | --- |
+| [Aegis](hackmyvm/aegis/README.md) | HackMyVM | Linux | Media | rsync anónimo · HMAC en Git · pickle RCE · path traversal IPC · sudo/source | ✅ Completada |
 | [MadLabs](hackmyvm/madlabs/README.md) | HackMyVM | Linux | Media | File upload bypass · RCE · PATH hijacking · inyección de comandos · clave SSH | ✅ Completada |
 
 ## Cómo se organiza
