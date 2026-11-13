@@ -6,8 +6,9 @@ Writeups de máquinas y laboratorios de seguridad ofensiva.
 
 ## Máquinas completadas
 
-| Máquina | Plataforma | Sistema | Dificultad estimada | Técnicas | Estado |
+| Máquina | Plataforma | Sistema | Dificultad | Técnicas | Estado |
 | --- | --- | --- | --- | --- | --- |
+| [Earth](vulnhub/earth/README.md) | VulnHub | Linux / Fedora | Fácil (oficial) | vhosts · XOR · RCE autenticada · ingeniería inversa · SUID | ✅ Completada |
 | [Aegis](hackmyvm/aegis/README.md) | HackMyVM | Linux | Media | rsync anónimo · HMAC en Git · pickle RCE · path traversal IPC · sudo/source | ✅ Completada |
 | [MadLabs](hackmyvm/madlabs/README.md) | HackMyVM | Linux | Media | File upload bypass · RCE · PATH hijacking · inyección de comandos · clave SSH | ✅ Completada |
 
