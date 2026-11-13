@@ -1,4 +1,4 @@
-🌐 **[Ver Earth en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/vulnhub/earth/Earth-Writeup.html)** · **[Ver Aegis en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/hackmyvm/aegis/Aegis-Writeup.html)** · **[Ver MadLabs en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/hackmyvm/madlabs/MadLabs-Writeup.html)**
+🌐 **[Ver Banner en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/hackmyvm/banner/Banner-Writeup.html)** · **[Ver Earth en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/vulnhub/earth/Earth-Writeup.html)** · **[Ver Aegis en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/hackmyvm/aegis/Aegis-Writeup.html)** · **[Ver MadLabs en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/hackmyvm/madlabs/MadLabs-Writeup.html)**
 
 # W4lterSec · Cybersecurity Labs
 
@@ -11,9 +11,9 @@ Laboratorios y writeups de ciberseguridad organizados por especialidad.
 
 ## Última máquina completada
 
-**[Earth · VulnHub](red-team/vulnhub/earth/README.md)** — Linux / Fedora 34 · dificultad oficial fácil · vhosts, criptoanálisis XOR, ejecución autenticada y escalada mediante un binario SUID.
+**[Banner · HackMyVM](red-team/hackmyvm/banner/README.md)** — Linux / Debian · manipulación de cookies, acróstico en el banner FTP, acceso SSH y escalada mediante configuración de sshd escribible.
 
-`terra (panel) → apache → root`
+`quiz web → FTP (111) → SSH (welcome) → root`
 
 ## Organización
 
@@ -25,6 +25,9 @@ red-team/
       README.md
       Earth-Writeup.html
   hackmyvm/
+    banner/
+      README.md
+      Banner-Writeup.html
     aegis/
       README.md
       Aegis-Writeup.html
