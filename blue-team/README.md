@@ -8,9 +8,9 @@ Espacio dedicado a laboratorios de defensa y análisis.
 
 | Proyecto | Área | Acceso |
 | --- | --- | --- |
-| [📊 Splunk](https://github.com/W4lterSec/Splunk) | SIEM · Blue Team | 🔒 Repositorio privado |
+| [📊 Splunk](https://github.com/W4lterSec/Splunk) | SIEM · Blue Team | 🌐 Público |
 
-**Splunk** forma parte de mis proyectos de Blue Team. El enlace abre el repositorio original; su consulta requiere autorización de acceso.
+**Splunk** forma parte de mis proyectos de Blue Team. El enlace abre el repositorio público, disponible para cualquier visitante.
 
 ## Áreas
 
