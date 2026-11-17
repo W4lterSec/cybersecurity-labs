@@ -68,7 +68,7 @@ a{color:var(--green)}
 .grid{display:grid; gap:var(--space-2)}
 .flags{grid-template-columns:1fr 1fr}
 .flagcard{position:relative; border:1px solid var(--border); border-radius:14px; padding:var(--space-3); background:linear-gradient(160deg,var(--card),var(--card2)); overflow:hidden}
-.flagcard::before{content:""; position:absolute; inset:0; border-radius:14px; padding:1px;
+.flagcard::before{content:""; pointer-events:none; position:absolute; inset:0; border-radius:14px; padding:1px;
   background:linear-gradient(130deg,var(--green),transparent 40%,transparent 60%,var(--red));
   -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
   -webkit-mask-composite:xor; mask-composite:exclude; opacity:.6}
@@ -136,6 +136,15 @@ footer{border-top:1px solid var(--border); padding:var(--space-4) 0; text-align:
 .machine-links{display:flex;flex-wrap:wrap;gap:12px 24px;margin-top:28px;font:13px var(--mono)}
 .table-scroll{overflow-x:auto}table.rem{min-width:580px}
 @media print{#matrix,.aurora,#spot,.scanlines,.scrollcue{display:none!important}.hero{min-height:auto}section{padding:24px 0}.reveal,.step{opacity:1!important;transform:none!important}}
+
+/* Flags remain selectable beneath the decorative border. */
+.flagcard .val{user-select:text;-webkit-user-select:text;cursor:text}
+.flagcopy{display:inline-flex;align-items:center;justify-content:center;margin-top:18px;min-height:44px;padding:9px 15px;border:1px solid var(--green-dim);border-radius:8px;background:#0a180e;color:var(--green);font:13px var(--mono);cursor:pointer}
+.flagcopy:hover{background:#102819;border-color:var(--green)}
+.flagcopy:focus-visible{outline:2px solid var(--green);outline-offset:4px}
+.flagcard.root .flagcopy{border-color:var(--red);color:#ff8383;background:#1b0d0d}
+.copy-status{min-height:1.6em;margin-top:16px;color:var(--muted);font:12px var(--mono)}
+@media print{.flagcopy,.copy-status{display:none!important}}
 </style>
 </head>
 <body>
@@ -183,14 +192,17 @@ footer{border-top:1px solid var(--border); padding:var(--space-4) 0; text-align:
       <div class="flagcard reveal">
         <div class="lbl">User Flag</div>
         <div class="who">● zximena448 — Backup Operators</div>
-        <div class="val">2fe79eb0e02ecd4dd2833cfcbbdb504c</div>
+        <div class="val" id="user-flag">2fe79eb0e02ecd4dd2833cfcbbdb504c</div>
+        <button type="button" class="flagcopy" data-copy="2fe79eb0e02ecd4dd2833cfcbbdb504c" data-copy-target="user-flag" aria-label="Copiar flag de usuario">Copiar flag</button>
       </div>
       <div class="flagcard root reveal">
         <div class="lbl">Root Flag</div>
         <div class="who">● Administrator — Domain Admin</div>
-        <div class="val">d41d8cd98f00b204e9800998ecf8427e</div>
+        <div class="val" id="root-flag">d41d8cd98f00b204e9800998ecf8427e</div>
+        <button type="button" class="flagcopy" data-copy="d41d8cd98f00b204e9800998ecf8427e" data-copy-target="root-flag" aria-label="Copiar flag de root">Copiar flag</button>
       </div>
     </div>
+    <p class="copy-status" id="copy-status" role="status" aria-live="polite" aria-atomic="true"></p>
   </section>
 
   <!-- RECON -->
@@ -381,12 +393,53 @@ footer{border-top:1px solid var(--border); padding:var(--space-4) 0; text-align:
   } else { spot.style.display='none'; }
 
   /* ---- copy buttons ---- */
+  var copyStatus = document.getElementById('copy-status');
+  function legacyCopy(value){
+    var active = document.activeElement;
+    var field = document.createElement('textarea');
+    field.value = value;
+    field.setAttribute('readonly', '');
+    field.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0';
+    document.body.appendChild(field);
+    field.focus({preventScroll:true});
+    field.select();
+    field.setSelectionRange(0, value.length);
+    var copied = false;
+    try { copied = document.execCommand('copy'); } catch(error) {}
+    field.remove();
+    if(active && typeof active.focus === 'function') active.focus({preventScroll:true});
+    return copied;
+  }
+  async function copyText(value){
+    if(navigator.clipboard && window.isSecureContext){
+      try { await navigator.clipboard.writeText(value); return true; } catch(error) {}
+    }
+    return legacyCopy(value);
+  }
   document.querySelectorAll('button[data-copy]').forEach(function(b){
-    b.addEventListener('click', function(){
-      navigator.clipboard.writeText(b.getAttribute('data-copy')).then(function(){
-        var o = b.textContent; b.textContent = '✓ copiado';
-        setTimeout(function(){ b.textContent = o; }, 1400);
-      });
+    var originalLabel = b.textContent;
+    var resetTimer;
+    b.addEventListener('click', async function(){
+      clearTimeout(resetTimer);
+      var value = b.getAttribute('data-copy');
+      var copied = await copyText(value);
+      var targetId = b.getAttribute('data-copy-target');
+      if(copied){
+        b.textContent = targetId ? '✓ Copiada' : '✓ copiado';
+        copyStatus.textContent = targetId === 'user-flag' ? 'Flag de usuario copiada.' : targetId === 'root-flag' ? 'Flag de root copiada.' : 'Comando copiado.';
+      } else {
+        var target = targetId && document.getElementById(targetId);
+        if(target){
+          var range = document.createRange();
+          range.selectNodeContents(target);
+          var selection = window.getSelection();
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+        b.textContent = target ? 'Texto seleccionado' : 'No se pudo copiar';
+        copyStatus.textContent = target ? 'La flag está seleccionada. Pulsa Ctrl+C o usa la opción Copiar de tu dispositivo.' : 'Selecciona el comando y usa la opción Copiar de tu dispositivo.';
+      }
+      resetTimer = setTimeout(function(){ b.textContent = originalLabel; }, 2200);
     });
   });
 
