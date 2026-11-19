@@ -1,4 +1,4 @@
-🌐 **[Ver DC02 en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/hackmyvm/dc02/DC02-Writeup.html)** · **[Ver Banner en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/hackmyvm/banner/Banner-Writeup.html)** · **[Ver Earth en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/vulnhub/earth/Earth-Writeup.html)** · **[Ver Aegis en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/hackmyvm/aegis/Aegis-Writeup.html)** · **[Ver MadLabs en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/hackmyvm/madlabs/MadLabs-Writeup.html)**
+🌐 **[Ver Government en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/hackmyvm/government/Government-Writeup.html)** · **[Ver DC02 en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/hackmyvm/dc02/DC02-Writeup.html)** · **[Ver Banner en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/hackmyvm/banner/Banner-Writeup.html)** · **[Ver Earth en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/vulnhub/earth/Earth-Writeup.html)** · **[Ver Aegis en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/hackmyvm/aegis/Aegis-Writeup.html)** · **[Ver MadLabs en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/hackmyvm/madlabs/MadLabs-Writeup.html)**
 
 
 # W4lterSec · Cybersecurity Labs
@@ -16,9 +16,9 @@ Laboratorios y writeups de ciberseguridad organizados por especialidad.
 ## Última máquina completada
 
 
-**[DC02 · HackMyVM](red-team/hackmyvm/dc02/README.md)** — Windows Server 2022 / Active Directory · enumeración Kerberos, AS-REP Roasting, Backup Operators, DCSync y Pass-the-Hash.
+**[Government · HackMyVM](red-team/hackmyvm/government/README.md)** — Linux / Ubuntu · SSRF, gopher, inyección de comandos, reutilización de credenciales y escalada con sudo.ws.
 
-`charlie → zximena448 (Backup Operators) → DC01$ → Administrator`
+`SSRF / gopher → admin web → www-data → fake → root`
 
 ## Organización
 
@@ -31,6 +31,9 @@ red-team/
       README.md
       Earth-Writeup.html
   hackmyvm/
+    government/
+      README.md
+      Government-Writeup.html
     dc02/
       README.md
       DC02-Writeup.html
