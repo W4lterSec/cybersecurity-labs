@@ -12,6 +12,7 @@ Writeups de máquinas y laboratorios de seguridad ofensiva.
 
 | Máquina | Plataforma | Sistema | Dificultad | Técnicas | Estado |
 | --- | --- | --- | --- | --- | --- |
+| [Government](hackmyvm/government/README.md) | HackMyVM | Linux / Ubuntu | — | SSRF · gopher · RCE · reutilización de credenciales · sudo.ws · command injection | ✅ Completada |
 | [DC02](hackmyvm/dc02/README.md) | HackMyVM | Windows Server 2022 / AD | — | Kerberos · password spraying · AS-REP Roasting · Backup Operators · DCSync · Pass-the-Hash | ✅ Completada |
 | [Banner](hackmyvm/banner/README.md) | HackMyVM | Linux / Debian | — | cookie del quiz · banner FTP · SSH · sshd_config escribible · sudo | ✅ Completada |
 | [Earth](vulnhub/earth/README.md) | VulnHub | Linux / Fedora | Fácil (oficial) | vhosts · XOR · RCE autenticada · ingeniería inversa · SUID | ✅ Completada |
