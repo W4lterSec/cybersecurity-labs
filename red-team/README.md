@@ -12,6 +12,7 @@ Writeups de máquinas y laboratorios de seguridad ofensiva.
 
 | Máquina | Plataforma | Sistema | Dificultad | Técnicas | Estado |
 | --- | --- | --- | --- | --- | --- |
+| [BitB · Abrir writeup visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/hackmyvm/bitb/BitB-Writeup.html) | HackMyVM | Linux / Ubuntu | — | BitB phishing · Artifactory PUT · cron RCE · reutilización de credenciales · LXD | ✅ Completada |
 | [Government](hackmyvm/government/README.md) | HackMyVM | Linux / Ubuntu | — | SSRF · gopher · RCE · reutilización de credenciales · sudo.ws · command injection | ✅ Completada |
 | [DC02](hackmyvm/dc02/README.md) | HackMyVM | Windows Server 2022 / AD | — | Kerberos · password spraying · AS-REP Roasting · Backup Operators · DCSync · Pass-the-Hash | ✅ Completada |
 | [Banner](hackmyvm/banner/README.md) | HackMyVM | Linux / Debian | — | cookie del quiz · banner FTP · SSH · sshd_config escribible · sudo | ✅ Completada |
