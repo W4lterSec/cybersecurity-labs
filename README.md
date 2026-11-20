@@ -1,4 +1,4 @@
-🌐 **[Ver Government en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/hackmyvm/government/Government-Writeup.html)** · **[Ver DC02 en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/hackmyvm/dc02/DC02-Writeup.html)** · **[Ver Banner en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/hackmyvm/banner/Banner-Writeup.html)** · **[Ver Earth en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/vulnhub/earth/Earth-Writeup.html)** · **[Ver Aegis en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/hackmyvm/aegis/Aegis-Writeup.html)** · **[Ver MadLabs en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/hackmyvm/madlabs/MadLabs-Writeup.html)**
+🌐 **[Ver BitB en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/hackmyvm/bitb/BitB-Writeup.html)** · **[Ver Government en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/hackmyvm/government/Government-Writeup.html)** · **[Ver DC02 en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/hackmyvm/dc02/DC02-Writeup.html)** · **[Ver Banner en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/hackmyvm/banner/Banner-Writeup.html)** · **[Ver Earth en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/vulnhub/earth/Earth-Writeup.html)** · **[Ver Aegis en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/hackmyvm/aegis/Aegis-Writeup.html)** · **[Ver MadLabs en formato visual](https://w4ltersec.github.io/cybersecurity-labs/red-team/hackmyvm/madlabs/MadLabs-Writeup.html)**
 
 
 # W4lterSec · Cybersecurity Labs
@@ -16,9 +16,9 @@ Laboratorios y writeups de ciberseguridad organizados por especialidad.
 ## Última máquina completada
 
 
-**[Government · HackMyVM](red-team/hackmyvm/government/README.md)** — Linux / Ubuntu · SSRF, gopher, inyección de comandos, reutilización de credenciales y escalada con sudo.ws.
+**[BitB · HackMyVM](https://w4ltersec.github.io/cybersecurity-labs/red-team/hackmyvm/bitb/BitB-Writeup.html)** — Linux / Ubuntu · Browser-in-the-Browser, Artifactory PUT, cron RCE, reutilización de credenciales y LXD.
 
-`SSRF / gopher → admin web → www-data → fake → root`
+`BitB → Artifactory PUT → cron / abidle → lalike (user) · LXD (root)`
 
 ## Organización
 
@@ -31,6 +31,8 @@ red-team/
       README.md
       Earth-Writeup.html
   hackmyvm/
+    bitb/
+      BitB-Writeup.html
     government/
       README.md
       Government-Writeup.html
